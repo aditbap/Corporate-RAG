@@ -1,0 +1,40 @@
+{
+  "name": "rag-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Production AI RAG Platform",
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "test:unit": "turbo test:unit",
+    "test:integration": "turbo test:integration",
+    "clean": "turbo clean",
+    "db:generate": "pnpm --filter @rag/database db:generate",
+    "db:migrate": "pnpm --filter @rag/database db:migrate",
+    "db:push": "pnpm --filter @rag/database db:push",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
+    "@typescript-eslint/parser": "^8.67.0",
+    "dotenv": "^17.4.2",
+    "eslint": "^10.8.1",
+    "jsonwebtoken": "^9.0.3",
+    "postgres": "^3.4.9",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.12",
+    "turbo": "^2.10.9",
+    "typescript": "^7.0.2"
+  }
+}

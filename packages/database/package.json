@@ -1,0 +1,34 @@
+{
+  "name": "@rag/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "lint": "eslint src/",
+    "db:generate": "drizzle-kit generate:pg",
+    "db:migrate": "drizzle-kit push:pg",
+    "db:push": "drizzle-kit push:pg"
+  },
+  "dependencies": {
+    "@rag/core": "workspace:*",
+    "drizzle-orm": "^0.30.0",
+    "postgres": "^3.4.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.20.14",
+    "typescript": "^5.0.0"
+  }
+}
