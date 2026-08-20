@@ -1,0 +1,34 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1786417418909,
+      "tag": "0000_light_slayback",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1787028801145,
+      "tag": "0001_many_thing",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1787197333849,
+      "tag": "0002_famous_albert_cleary",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1787206916380,
+      "tag": "0003_brief_invisible_woman",
+      "breakpoints": true
+    }
+  ]
+}

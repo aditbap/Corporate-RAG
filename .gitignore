@@ -1,0 +1,78 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+!.env.example
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Turborepo
+.turbo/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test coverage & Temporary
+coverage/
+tmp/
+temp/
+
+# Docker volumes
+docker-data/
+postgres-data/
+qdrant-data/
+redis-data/
+
+# Agents & Skills
+.agents/
+skills-lock.json
+graphify-out/
+implementation_plan.md
+
+# Scratchpads, Test Scripts & Trash Artifacts
+test-*.ts
+test-*.js
+test_*.js
+test_*.ts
+setup-*.ts
+setup-*.js
+run_migration.js
+run_migration.ts
+get-*.ts
+get-*.js
+update-*.js
+update-*.ts
+*.md
+!README.md
+!CHANGELOG.md
+
+# Uploads / Data
+uploads/
+*.pdf
+*.csv
