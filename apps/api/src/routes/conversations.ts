@@ -75,20 +75,13 @@ export const conversationsRoutes: FastifyPluginAsync = async (fastify) => {
       // Fetch citations for these messages
       const messageIds = conversationMessages.map(m => m.id);
       
-      let messageCitations: any[] = [];
-      if (messageIds.length > 0) {
-        // Find citations and join with document title
-        messageCitations = await db.query.citations.findMany({
-          where: (citations, { inArray }) => inArray(citations.messageId, messageIds),
-          with: {
-            document: {
-              columns: {
-                title: true
-              }
-            }
-          }
+      // Find citations and join with document title
+      const loadCitations = (ids: string[]) =>
+        db.query.citations.findMany({
+          where: (citations, { inArray }) => inArray(citations.messageId, ids),
+          with: { document: { columns: { title: true } } },
         });
-      }
+      const messageCitations = messageIds.length > 0 ? await loadCitations(messageIds) : [];
 
       // Format response
       const formattedMessages = conversationMessages.map(m => {

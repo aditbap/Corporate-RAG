@@ -1,5 +1,5 @@
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
-import { requireLibraryPermission } from '@rag/auth';
+import { requireLibraryPermission, requireUser } from '@rag/auth';
 import { LibraryRepository } from '@rag/database';
 
 type Role = 'owner' | 'admin' | 'member' | 'viewer';
@@ -26,14 +26,14 @@ function canManage(actor: Role, target: Role): boolean {
 export const libraryRoutes: FastifyPluginAsync = async (fastify) => {
   // ---- Libraries I belong to (personal + shared) ----
   fastify.get('/', async (request) => {
-    return { data: await libraryRepo.listForUser(request.user!.id) };
+    return { data: await libraryRepo.listForUser(requireUser(request).id), currentUserId: requireUser(request).id };
   });
 
   fastify.post('/', async (request, reply) => {
     const { name, description } = (request.body ?? {}) as { name?: string; description?: string };
     const trimmed = name?.trim();
     if (!trimmed || trimmed.length > 100) return fail(reply, request, 400, 'BAD_REQUEST', 'name is required (max 100 characters)');
-    const org = await libraryRepo.create(request.user!.id, { name: trimmed, description: description?.trim().slice(0, 500) || undefined });
+    const org = await libraryRepo.create(requireUser(request).id, { name: trimmed, description: description?.trim().slice(0, 500) || undefined });
     return reply.status(201).send({ data: { id: org.id, name: org.name, description: org.description, kind: org.kind, role: 'owner' } });
   });
 
@@ -50,7 +50,7 @@ export const libraryRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/join', async (request, reply) => {
     const { code } = (request.body ?? {}) as { code?: string };
     if (!code || typeof code !== 'string') return fail(reply, request, 400, 'BAD_REQUEST', 'code is required');
-    const result = await libraryRepo.joinWithInvite(request.user!.id, code.trim());
+    const result = await libraryRepo.joinWithInvite(requireUser(request).id, code.trim());
     if (!result.ok) {
       const status = result.reason === 'INVALID' ? 404 : 410;
       return fail(reply, request, status, `INVITE_${result.reason}`, `Invite is ${result.reason.toLowerCase()}`);
@@ -93,7 +93,7 @@ export const libraryRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
     // currentUserId lets the UI mark "you" / enable "leave" using the same id the API
     // authorises with, instead of whatever id the web session happens to carry.
-    return { data: await libraryRepo.listMembers(id), currentUserId: request.user!.id };
+    return { data: await libraryRepo.listMembers(id), currentUserId: requireUser(request).id };
   });
 
   fastify.patch('/:id/members/:userId', { preHandler: requireLibraryPermission('members:manage') }, async (request, reply) => {
@@ -121,7 +121,7 @@ export const libraryRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete('/:id/members/:userId', { preHandler: requireLibraryPermission('members:read') }, async (request, reply) => {
     const { id, userId } = request.params as { id: string; userId: string };
     const actor = request.userRole as Role;
-    const self = userId === request.user!.id;
+    const self = userId === requireUser(request).id;
 
     const org = await libraryRepo.get(id);
     if (!org || org.kind !== 'shared') return fail(reply, request, 400, 'NOT_SHARED', 'You cannot leave a personal workspace');
@@ -161,7 +161,7 @@ export const libraryRoutes: FastifyPluginAsync = async (fastify) => {
     const org = await libraryRepo.get(id);
     if (!org || org.kind !== 'shared') return fail(reply, request, 400, 'NOT_SHARED', 'Personal workspaces cannot be shared; create a shared library');
 
-    const invite = await libraryRepo.createInvite(id, request.user!.id, { role: role as Exclude<Role, 'owner'>, expiresInDays, maxUses: body.maxUses });
+    const invite = await libraryRepo.createInvite(id, requireUser(request).id, { role: role as Exclude<Role, 'owner'>, expiresInDays, maxUses: body.maxUses });
     return reply.status(201).send({ data: invite });
   });
 

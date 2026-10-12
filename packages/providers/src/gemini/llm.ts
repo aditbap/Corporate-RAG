@@ -1,6 +1,11 @@
 import { GoogleGenAI } from '@google/genai';
 import { LLMProvider, LLMMessage, LLMResponse, LLMStreamChunk } from '../interfaces/llm.js';
 
+interface GeminiContent {
+  role: 'user' | 'model';
+  parts: { text: string }[];
+}
+
 export class GeminiLLMProvider implements LLMProvider {
   public readonly name = 'gemini';
   public readonly model: string;
@@ -17,7 +22,7 @@ export class GeminiLLMProvider implements LLMProvider {
 
     // Convert to Gemini format
     let systemInstruction = undefined;
-    const contents: any[] = [];
+    const contents: GeminiContent[] = [];
 
     for (const msg of messages) {
       if (msg.role === 'system') {
@@ -57,7 +62,7 @@ export class GeminiLLMProvider implements LLMProvider {
 
   async *generateStream(messages: LLMMessage[]): AsyncIterable<LLMStreamChunk> {
     let systemInstruction = undefined;
-    const contents: any[] = [];
+    const contents: GeminiContent[] = [];
 
     for (const msg of messages) {
       if (msg.role === 'system') {

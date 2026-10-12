@@ -46,8 +46,8 @@ export class CloudflareLLMProvider implements LLMProvider {
       throw new Error(`Cloudflare API error: ${response.status} ${err}`);
     }
 
-    const data = await response.json() as any;
-    const result = data.result || {};
+    const data = (await response.json()) as { result?: { response?: string } };
+    const result = data.result ?? {};
 
     const latency_ms = Date.now() - start;
 
@@ -89,7 +89,7 @@ export class CloudflareLLMProvider implements LLMProvider {
     let buffer = '';
 
     if ('getReader' in response.body) {
-      const reader = (response.body as any).getReader();
+      const reader = (response.body as ReadableStream<Uint8Array>).getReader();
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -114,7 +114,7 @@ export class CloudflareLLMProvider implements LLMProvider {
         }
       }
     } else {
-      for await (const chunk of response.body as any) {
+      for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
         buffer += decoder.decode(chunk, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';

@@ -1,6 +1,6 @@
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import '@fastify/multipart';
-import { requirePermissionMiddleware, canMutateDocument, type Role } from '@rag/auth';
+import { requirePermissionMiddleware, requireUser, canMutateDocument, type Role } from '@rag/auth';
 import { DocumentRepository, JobRepository, FolderRepository } from '@rag/database';
 import { MinioStorageProvider } from '@rag/providers';
 import { ingestionQueue, redisConnection } from '../queue.js';
@@ -27,6 +27,7 @@ const docRepo = new DocumentRepository();
 const jobRepo = new JobRepository();
 const storage = MinioStorageProvider.fromEnv();
 const folderRepo = new FolderRepository();
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Invalidate cached chat answers for an org (see chat.ts `cacheVersion`). Best-effort. */
 async function bumpCacheVersion(orgId: string) {
@@ -47,7 +48,7 @@ const ALLOWED_MIME_TYPES = [
 
 /** 403 unless the caller may update/delete this document (admins: any; members: only their own uploads). */
 function denyIfNotAllowed(request: FastifyRequest, reply: FastifyReply, verb: 'update' | 'delete', uploadedBy: string | null | undefined) {
-  if (canMutateDocument(request.userRole as Role, verb, uploadedBy, request.user!.id)) return false;
+  if (canMutateDocument(request.userRole as Role, verb, uploadedBy, requireUser(request).id)) return false;
   reply.status(403).send({ error: { code: 'FORBIDDEN', message: `You can only ${verb} documents you uploaded`, requestId: request.id } });
   return true;
 }
@@ -69,9 +70,11 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'User does not belong to an organization' } });
     }
 
-    const { limit, offset, folderId } = request.query as any;
+    const { limit, offset, folderId } = request.query as { limit?: string; offset?: string; folderId?: string };
     const parsedFolderId = folderId === 'null' ? null : (folderId || undefined);
-    const docs = await docRepo.listWithUploader(orgId, parseInt(limit) || 20, parseInt(offset) || 0, parsedFolderId);
+    // Bounded page size: an unbounded `limit` would let one request load a whole library.
+    const pageSize = Math.min(Math.max(parseInt(limit ?? '', 10) || 20, 1), 200);
+    const docs = await docRepo.listWithUploader(orgId, pageSize, Math.max(parseInt(offset ?? '', 10) || 0, 0), parsedFolderId);
     return { data: docs };
   });
 
@@ -88,7 +91,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
     // happens centrally in the `authenticate` middleware (packages/auth), before
     // requirePermissionMiddleware runs — see ensurePersonalWorkspace there.
 
-    const data = await (request as any).file();
+    const data = await request.file();
     if (!data) {
       return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'No file uploaded' } });
     }
@@ -123,7 +126,19 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
                      data.mimetype.includes('png') ? 'png' :
                      data.mimetype.includes('webp') ? 'webp' : 'txt';
 
-    const folderId = data.fields?.folderId?.value;
+    const folderField = data.fields?.folderId;
+    // The web client sends the string 'null' for "library root".
+    const rawFolderId = folderField && !Array.isArray(folderField) && 'value' in folderField && typeof folderField.value === 'string'
+      ? folderField.value
+      : undefined;
+    const folderId = rawFolderId && rawFolderId !== 'null' ? rawFolderId : undefined;
+    if (folderId !== undefined) {
+      // Must be a folder in this library (also keeps a non-UUID from reaching Postgres as a 500).
+      const folder = UUID_RE.test(folderId) ? await folderRepo.getById(orgId, folderId) : null;
+      if (!folder) {
+        return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Folder not found in this library' } });
+      }
+    }
 
     // Create Document record in DB
     const doc = await docRepo.create(orgId, {
@@ -134,7 +149,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       fileSizeBytes,
       fileHash,
       status: 'uploaded',
-      folderId: folderId === 'null' ? null : (folderId as string || null),
+      folderId: folderId ?? null,
       uploadedBy: request.user?.id,
       metadata: {},
     });
@@ -203,7 +218,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
     }
     if (denyIfNotAllowed(request, reply, 'update', existingDoc.uploadedBy)) return;
 
-    const data = await (request as any).file();
+    const data = await request.file();
     if (!data) {
       return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'No file uploaded' } });
     }
@@ -423,7 +438,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       const safeFileName = encodeURIComponent(doc.fileName);
       reply.header('Content-Disposition', `inline; filename*=UTF-8''${safeFileName}`);
       return reply.send(stream);
-    } catch (err: any) {
+    } catch (err) {
       request.log.error(err, 'Failed to read file');
       return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Failed to read file' } });
     }

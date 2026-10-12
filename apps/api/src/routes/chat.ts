@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { requirePermissionMiddleware } from '@rag/auth';
-import { db, conversations, messages, citations, ChunkRepository, eq, and } from '@rag/database';
+import { db, conversations, messages, citations, documents, documentChunks, ChunkRepository, eq, and } from '@rag/database';
 import { NvidiaEmbeddingProvider, CloudflareLLMProvider, CohereRerankerProvider, LLMMessage, getLangfuse, flushLangfuse } from '@rag/providers';
 import type { ScoredChunk } from '@rag/core';
 import crypto from 'crypto';
@@ -35,7 +35,13 @@ function getRerankerProvider(): CohereRerankerProvider | null {
   }
 }
 
-type ChunkSearchResult = { chunk: { id: string; content: string; documentId: string; [k: string]: any }; document: any };
+type ChunkSearchResult = { chunk: typeof documentChunks.$inferSelect; document: typeof documents.$inferSelect };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+interface IncomingMessage { role: string; content: string }
+const isIncomingMessage = (m: unknown): m is IncomingMessage =>
+  typeof m === 'object' && m !== null && typeof (m as IncomingMessage).role === 'string' && typeof (m as IncomingMessage).content === 'string';
 
 /**
  * Merges dense (pgvector) and full-text (BM25-ish) candidate lists by
@@ -61,8 +67,13 @@ function reciprocalRankFusion(
 
   return [...scores.entries()]
     .sort(([, a], [, b]) => b - a)
-    .map(([id, score]) => ({ chunk: byId.get(id)!.chunk, document: byId.get(id)!.document, similarity: score }));
+    .flatMap(([id, score]) => {
+      const item = byId.get(id);
+      return item ? [{ chunk: item.chunk, document: item.document, similarity: score }] : [];
+    });
 }
+const CHAT_RATE_LIMIT_PER_MINUTE = parseInt(process.env.RATE_LIMIT_CHAT_PER_MINUTE || '20', 10);
+
 /** CORS headers for hijacked SSE responses (Fastify's cors plugin doesn't run after hijack). */
 function sseCorsHeaders(origin: string | undefined): Record<string, string> {
   const allowed = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim());
@@ -90,23 +101,32 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
     // happens centrally in the `authenticate` middleware (packages/auth) — see
     // ensurePersonalWorkspace there.
 
-    const { messages: incomingMessages, stream, conversationId: reqConversationId, documentIds } = request.body as any;
-    if (!incomingMessages || !Array.isArray(incomingMessages) || incomingMessages.length === 0) {
+    const body = (request.body ?? {}) as { messages?: unknown; stream?: boolean; conversationId?: unknown; documentIds?: unknown };
+    const { stream } = body;
+    const rawMessages = body.messages;
+    if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
       return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Missing or empty messages array' } });
     }
+    if (!rawMessages.every(isIncomingMessage)) {
+      return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Each message needs a string role and content' } });
+    }
+    const incomingMessages: IncomingMessage[] = rawMessages;
 
-    let conversationId = reqConversationId;
+    if (body.conversationId !== undefined && (typeof body.conversationId !== 'string' || !UUID_RE.test(body.conversationId))) {
+      return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Invalid conversation ID format' } });
+    }
+    let conversationId = body.conversationId as string | undefined;
     let isNewConversation = false;
 
-    if (documentIds !== undefined) {
-      if (!Array.isArray(documentIds)) {
+    let documentIds: string[] | undefined;
+    if (body.documentIds !== undefined) {
+      if (!Array.isArray(body.documentIds)) {
         return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'documentIds must be an array' } });
       }
-      for (const id of documentIds) {
-        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-          return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Invalid document ID format' } });
-        }
+      if (!body.documentIds.every((id): id is string => typeof id === 'string' && UUID_RE.test(id))) {
+        return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Invalid document ID format' } });
       }
+      documentIds = body.documentIds;
     }
 
     if (conversationId) {
@@ -128,8 +148,8 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
       isNewConversation = true;
     }
 
-    const lastMessage = incomingMessages[incomingMessages.length - 1];
-    if (lastMessage.role !== 'user') {
+    const lastMessage = incomingMessages.at(-1);
+    if (!lastMessage || lastMessage.role !== 'user') {
       return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Last message must be from user' } });
     }
 
@@ -140,7 +160,7 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
       if (currentLimit === 1) {
         await redisConnection.expire(rateLimitKey, 60); // 1 minute window
       }
-      if (currentLimit > 20) {
+      if (currentLimit > CHAT_RATE_LIMIT_PER_MINUTE) {
         return reply.status(429).send({ error: { code: 'TOO_MANY_REQUESTS', message: 'Rate limit exceeded. Please try again in a minute.' } });
       }
     } catch (err) {
@@ -241,7 +261,7 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
       const rewritePrompt = `Given the following conversation history and the user's latest follow-up question, rewrite the follow-up question to be a standalone query that can be used to search a vector database for relevant documents. Do not answer the question, ONLY return the standalone query.
 
 Conversation History:
-${incomingMessages.slice(0, -1).map((m: any) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n')}
+${incomingMessages.slice(0, -1).map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n')}
 
 Latest Question: ${userQuery}
 
@@ -295,13 +315,9 @@ Standalone Query:`;
           const reranked = await reranker.rerank(standaloneQuery, candidates, 5);
           searchResults = reranked
             .filter(r => (r.score ?? 0) >= 0.15) // THRESHOLD FILTER
-            .map(r => {
-              const item = initialCandidates.find(c => c.chunk.id === r.id)!;
-              return {
-                chunk: item.chunk,
-                document: item.document,
-                similarity: r.score ?? 0,
-              };
+            .flatMap(r => {
+              const item = initialCandidates.find(c => c.chunk.id === r.id);
+              return item ? [{ chunk: item.chunk, document: item.document, similarity: r.score ?? 0 }] : [];
             });
         } catch (err) {
           request.log.warn(err, 'Reranking failed, falling back to fused hybrid-search order');
@@ -340,7 +356,7 @@ ${contextText}`;
     // 5. Build LLM prompt
     const llmMessages: LLMMessage[] = [
       { role: 'system', content: systemPrompt },
-      ...incomingMessages.map((m: any) => ({ role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.content }))
+      ...incomingMessages.map((m) => ({ role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.content }))
     ];
 
     const userMessageId = crypto.randomUUID();
@@ -359,7 +375,7 @@ ${contextText}`;
       }
     }
 
-    const saveToDb = async (fullContent: string, usage: any, latencyMs: number) => {
+    const saveToDb = async (fullContent: string, usage: { total_tokens?: number } | undefined, latencyMs: number) => {
       try {
 
         await db.insert(messages).values({
@@ -429,7 +445,7 @@ ${contextText}`;
       }
     };
 
-    const saveToCache = async (content: string, citationsOutput: any) => {
+    const saveToCache = async (content: string, citationsOutput: unknown) => {
       try {
         const cacheData = JSON.stringify({ content, citations: citationsOutput });
         await redisConnection.setex(cacheKey, 3600, cacheData); // 1 hour TTL
@@ -475,9 +491,9 @@ ${contextText}`;
             finalUsage = chunk.usage;
           }
         }
-      } catch (err: any) {
+      } catch (err) {
         request.log.error(err, 'Streaming failed');
-        const errMsg = err.message ? err.message : 'Generation failed';
+        const errMsg = err instanceof Error && err.message ? err.message : 'Generation failed';
         reply.raw.write(`data: ${JSON.stringify({ type: 'error', message: errMsg })}\n\n`);
       }
 

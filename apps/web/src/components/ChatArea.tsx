@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Sparkles, Loader2, Paperclip, ArrowUp, X, FileText, CheckCircle2, Plus, Mic, AlertCircle } from 'lucide-react'
+import { Sparkles, Loader2, ArrowUp, X, FileText, CheckCircle2, Plus, Mic, AlertCircle } from 'lucide-react'
 import { getAccessToken } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import { Download, ImageIcon } from 'lucide-react'
@@ -10,6 +10,7 @@ import remarkGfm from 'remark-gfm'
 import TextareaAutosize from 'react-textarea-autosize'
 import { cn } from '@/lib/utils'
 import type { ChatMessage, Citation } from '@/types/chat'
+import { useLibraryAccess } from '@/lib/active-library'
 
 type Message = ChatMessage
 
@@ -57,6 +58,7 @@ export function ChatArea({
     setTimeout(() => setNotification(null), 5000)
   }
 
+  const access = useLibraryAccess()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -84,7 +86,7 @@ export function ChatArea({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (e) {
+    } catch {
       showNotification('Failed to download file', 'error');
     }
   }
@@ -106,7 +108,7 @@ export function ChatArea({
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       setPreviewDocument({ id, url, fileName, fileType });
-    } catch (e) {
+    } catch {
       showNotification('Failed to open file', 'error');
     }
   }
@@ -260,7 +262,7 @@ export function ChatArea({
         }
 
         setUploadStatus({ file: file.name, status: 'success' })
-      } catch (error) {
+      } catch {
         setUploadStatus({ file: file.name, status: 'error' })
       }
       
@@ -313,6 +315,7 @@ export function ChatArea({
   }
 
   const handleDrop = async (e: React.DragEvent) => {
+    if (!access.canUpload) { e.preventDefault(); setIsDragging(false); return }
     e.preventDefault()
     setIsDragging(false)
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -471,14 +474,14 @@ export function ChatArea({
                   multiple
                 />
 
-                <button
+                {access.canUpload && <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
                   className="flex size-9 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/50 transition-colors disabled:opacity-50 mb-[1px]"
                 >
                   <Plus className="size-6" />
-                </button>
+                </button>}
 
                 <TextareaAutosize
                   value={input}
@@ -556,7 +559,11 @@ export function ChatArea({
           </div>
           <div className="flex-1 bg-zinc-950/50 border-x border-b border-zinc-800 rounded-b-xl overflow-hidden relative flex items-center justify-center">
             {previewDocument.fileType.includes('image') ? (
-              <img src={previewDocument.url} alt={previewDocument.fileName} className="max-w-full max-h-full object-contain p-4" />
+              <>
+                {/* Blob URL of the viewer's own download; next/image can't optimise blob: URLs. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={previewDocument.url} alt={previewDocument.fileName} className="max-w-full max-h-full object-contain p-4" />
+              </>
             ) : previewDocument.fileType === 'pdf' ? (
               <iframe src={`${previewDocument.url}#toolbar=0`} className="w-full h-full border-none bg-zinc-900 rounded-b-xl" />
             ) : (

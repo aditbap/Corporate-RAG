@@ -1,4 +1,5 @@
 import { Client } from 'minio';
+import type { Readable } from 'stream';
 import type { StorageProvider, StorageObjectInfo } from '@rag/core';
 
 export interface MinioStorageOptions {
@@ -57,7 +58,7 @@ export class MinioStorageProvider implements StorageProvider {
   async upload(key: string, data: NodeJS.ReadableStream, contentType?: string): Promise<StorageObjectInfo> {
     await this.ensureBucket();
     const metaData = contentType ? { 'Content-Type': contentType } : undefined;
-    await this.client.putObject(this.bucket, key, data as any, undefined, metaData);
+    await this.client.putObject(this.bucket, key, data as unknown as Readable, undefined, metaData);
     const stat = await this.client.statObject(this.bucket, key);
     return { key, sizeBytes: stat.size };
   }

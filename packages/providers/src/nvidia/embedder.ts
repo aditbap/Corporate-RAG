@@ -50,8 +50,9 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(this.timeoutMs)
       });
-    } catch (err: any) {
-      if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+    } catch (err) {
+      const name = err instanceof Error ? err.name : undefined;
+      if (name === 'TimeoutError' || name === 'AbortError') {
         throw new Error(
           `NVIDIA embeddings request timed out after ${this.timeoutMs}ms (model: ${this.model})`,
           { cause: err }
@@ -65,12 +66,9 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
       throw new Error(`NVIDIA API error: ${response.status} ${err}`);
     }
 
-    const data = await response.json() as any;
-    
-    const embeddings = data.data.map((item: any) => {
-      let vec = item.embedding as number[];
-      return vec;
-    });
+    const data = (await response.json()) as { data: { embedding: number[] }[]; usage?: { prompt_tokens?: number; total_tokens?: number } };
+
+    const embeddings = data.data.map((item) => item.embedding);
 
     const latency_ms = Date.now() - start;
     

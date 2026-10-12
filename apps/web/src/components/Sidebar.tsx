@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { Plus, MessageSquare, LogOut, User, Loader2, Trash2, Library } from 'lucide-react'
+import { Plus, User, Trash2, Library } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useEffect, useState } from 'react'
 import { getAccessToken } from '@/lib/auth-client'
 import { usePathname } from 'next/navigation'
 import { LibrarySwitcher } from '@/components/LibrarySwitcher'
+import { hardNavigate } from '@/lib/active-library'
 
 interface Conversation {
   id: string;
@@ -114,7 +115,7 @@ export function Sidebar({ logoutAction }: { logoutAction: () => void }) {
                   if (res.ok) {
                     setConversations(prev => prev.filter(c => c.id !== conv.id))
                     if (isActive) {
-                      window.location.href = '/dashboard/chat'
+                      hardNavigate('/dashboard/chat')
                     }
                   }
                 } catch (error) {

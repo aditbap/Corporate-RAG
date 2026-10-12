@@ -25,12 +25,24 @@ export default [
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-non-null-assertion": "warn",
-      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-console": ["warn", { allow: ["warn", "error", "debug"] }],
       "no-unused-vars": "off",
       // TypeScript already reports undefined identifiers; core `no-undef` false-positives on
       // ambient types like NodeJS.ReadableStream and globals like Buffer.
       "no-undef": "off",
     },
+  },
+  {
+    // Long-running processes and CLI scripts log to stdout by design; the API's request
+    // handlers use the Fastify logger instead, so `no-console` stays on for those.
+    files: [
+      "apps/worker/**/*.ts",
+      "apps/api/src/index.ts",
+      "apps/api/src/scripts/**/*.ts",
+      "packages/database/src/migrate.ts",
+      "scripts/**/*.ts",
+    ],
+    rules: { "no-console": "off" },
   },
   {
     ignores: ["**/dist/**", "**/node_modules/**", "**/.next/**", "**/.turbo/**"],

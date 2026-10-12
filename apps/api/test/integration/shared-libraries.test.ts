@@ -127,6 +127,33 @@ describe('document & folder permissions', () => {
   });
 });
 
+describe('input validation', () => {
+  it('rejects malformed chat bodies with 400 instead of crashing', async () => {
+    const post = (body: unknown) => api(owner, 'POST', '/chat/completions', { org: lib, body });
+    assert.equal((await post({})).status, 400);
+    assert.equal((await post({ messages: [] })).status, 400);
+    assert.equal((await post({ messages: [{ role: 'user' }] })).status, 400, 'missing content');
+    assert.equal((await post({ messages: [{ role: 'user', content: 42 }] })).status, 400, 'non-string content');
+    assert.equal((await post({ messages: [{ role: 'user', content: 'hi' }], conversationId: 'abc' })).status, 400, 'bad conversation id');
+    assert.equal((await post({ messages: [{ role: 'user', content: 'hi' }], documentIds: ['nope'] })).status, 400, 'bad document id');
+    assert.equal((await post({ messages: [{ role: 'user', content: 'hi' }], documentIds: 'x' })).status, 400);
+  });
+
+  it('validates the upload folder: library root, own folder ok; foreign or malformed rejected', async () => {
+    const mine = (await api(admin, 'POST', '/folders', { org: lib, body: { name: 'Upload target' } })).body.data.id;
+    const foreign = (await api(outsider, 'POST', '/folders', { body: { name: 'Elsewhere' } })).body.data.id;
+    assert.equal((await upload(member, lib, 'root.txt', 'text/plain', 'a', { folderId: 'null' })).status, 201, "'null' means library root");
+    assert.equal((await upload(member, lib, 'in.txt', 'text/plain', 'b', { folderId: mine })).status, 201);
+    assert.equal((await upload(member, lib, 'bad.txt', 'text/plain', 'c', { folderId: foreign })).status, 400, 'another library\'s folder');
+    assert.equal((await upload(member, lib, 'bad2.txt', 'text/plain', 'd', { folderId: 'not-a-uuid' })).status, 400);
+  });
+
+  it('bounds the document list page size', async () => {
+    assert.equal((await api(owner, 'GET', '/documents?limit=100000&offset=-5', { org: lib })).status, 200);
+    assert.equal((await api(owner, 'GET', '/documents?limit=abc', { org: lib })).status, 200);
+  });
+});
+
 describe('uploaded content safety', () => {
   it('serves HTML as inert text with nosniff + CSP sandbox', async () => {
     const up = await upload(member, lib, 'evil.html', 'text/html', '<script>alert(1)</script>');

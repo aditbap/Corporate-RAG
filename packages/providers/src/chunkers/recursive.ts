@@ -13,7 +13,7 @@ export class RecursiveChunker implements ChunkerProvider {
     });
   }
 
-  async chunk(text: string, metadata?: Record<string, any>): Promise<ChunkResult[]> {
+  async chunk(text: string, metadata?: Record<string, unknown>): Promise<ChunkResult[]> {
     const docs = await this.splitter.createDocuments([text], [metadata || {}]);
     
     return docs.map(doc => ({

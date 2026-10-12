@@ -32,13 +32,15 @@ export const ragCacheHits = new client.Counter({
  * same as /health) — Prometheus has no way to carry a Keycloak bearer token, and
  * this endpoint only exposes aggregate counters, not per-tenant data.
  */
+const requestStart = new WeakMap<object, bigint>();
+
 export function registerMetrics(server: FastifyInstance) {
   server.addHook('onRequest', async (request) => {
-    (request as any)._metricsStart = process.hrtime.bigint();
+    requestStart.set(request, process.hrtime.bigint());
   });
 
   server.addHook('onResponse', async (request, reply) => {
-    const start = (request as any)._metricsStart as bigint | undefined;
+    const start = requestStart.get(request);
     if (!start) return;
     const durationSeconds = Number(process.hrtime.bigint() - start) / 1e9;
     httpRequestDuration.observe(
