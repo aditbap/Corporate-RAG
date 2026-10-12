@@ -27,6 +27,9 @@ export default [
       "@typescript-eslint/no-non-null-assertion": "warn",
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "no-unused-vars": "off",
+      // TypeScript already reports undefined identifiers; core `no-undef` false-positives on
+      // ambient types like NodeJS.ReadableStream and globals like Buffer.
+      "no-undef": "off",
     },
   },
   {

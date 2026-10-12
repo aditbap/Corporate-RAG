@@ -6,14 +6,17 @@ import { useParams } from 'next/navigation'
 import { getAccessToken } from '@/lib/auth-client'
 import { Loader2 } from 'lucide-react'
 import { ChatAreaSkeleton } from '@/components/ChatAreaSkeleton'
+import type { ChatMessage } from '@/types/chat'
 
 export default function ExistingChatPage() {
   const params = useParams()
   const conversationId = params.id as string
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Reset the loading flag when navigating between conversations (fetch-on-param-change).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     async function fetchConversation() {
       try {

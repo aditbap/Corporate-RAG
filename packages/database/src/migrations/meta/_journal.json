@@ -50,6 +50,13 @@
       "when": 1788000000000,
       "tag": "0006_shared_libraries",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1788100000000,
+      "tag": "0007_users_email_not_unique",
+      "breakpoints": true
     }
   ]
 }

@@ -9,13 +9,9 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import TextareaAutosize from 'react-textarea-autosize'
 import { cn } from '@/lib/utils'
+import type { ChatMessage, Citation } from '@/types/chat'
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  citations?: any[];
-}
+type Message = ChatMessage
 
 export function ChatArea({
   initialConversationId,
@@ -41,6 +37,8 @@ export function ChatArea({
       if (docIds) {
         const parsedIds = docIds.split(',').filter(id => id.trim() !== '')
         if (parsedIds.length > 0) {
+          // One-time hydration from sessionStorage on mount.
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setDocumentIds(parsedIds)
         }
       }
@@ -411,15 +409,15 @@ export function ChatArea({
                               <span className="text-xs font-medium text-muted-foreground">Sources</span>
                             </div>
                             <div className="p-2 space-y-1">
-                              {Array.from(new Map(m.citations.map((c: any) => [c.documentId || c.fileName || c.documentTitle || c.document, c])).values()).map((c: any, i: number) => (
+                              {Array.from(new Map(m.citations.map((c: Citation) => [c.documentId || c.fileName || c.documentTitle || c.document, c])).values()).map((c: Citation, i: number) => (
                                 <div 
                                   key={i} 
                                   className="flex items-center gap-2 text-[13px] px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer text-foreground/80"
-                                  onClick={() => c.documentId ? handleView(c.documentId, c.fileName || c.documentTitle || c.document, c.fileType || 'pdf') : showNotification('File cannot be previewed because it is from an older chat', 'error')}
+                                  onClick={() => c.documentId ? handleView(c.documentId, c.fileName || c.documentTitle || c.document || 'document', c.fileType || 'pdf') : showNotification('File cannot be previewed because it is from an older chat', 'error')}
                                 >
                                   {c.fileType?.includes('image') ? <ImageIcon className="size-4 text-muted-foreground" /> : <FileText className="size-4 text-muted-foreground" />}
                                   <span className="truncate flex-1">{c.fileName || c.documentTitle || c.document || 'Document'}</span>
-                                  <span className="text-muted-foreground text-[11px]">{(c.score * 100).toFixed(0)}%</span>
+                                  {c.score != null && <span className="text-muted-foreground text-[11px]">{(c.score * 100).toFixed(0)}%</span>}
                                 </div>
                               ))}
                             </div>
@@ -444,7 +442,7 @@ export function ChatArea({
         <div className={`w-full max-w-3xl ${messages.length > 0 ? 'pointer-events-auto' : ''}`}>
           {messages.length === 0 && (
             <div className="text-center mb-8 pointer-events-none">
-              <h2 className="text-[22px] font-reguler text-zinc-100">Let's Chat with RAG Asisstant</h2>
+              <h2 className="text-[22px] font-normal text-zinc-100">Let&apos;s Chat with RAG Assistant</h2>
             </div>
           )}
           {uploadStatus && (
@@ -501,7 +499,7 @@ export function ChatArea({
                   </button>
 
                   <button
-                    onClick={(e) => handleSend(e as any)}
+                    onClick={(e) => handleSend(e as unknown as React.FormEvent)}
                     disabled={!input.trim() || isLoading}
                     className="flex size-9 items-center justify-center rounded-full bg-zinc-700 text-zinc-200 transition-transform hover:bg-zinc-600 hover:text-white active:scale-95 disabled:bg-muted disabled:text-muted-foreground/30 disabled:cursor-not-allowed"
                   >
