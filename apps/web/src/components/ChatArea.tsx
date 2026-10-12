@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Send, Sparkles, Loader2, Paperclip, ArrowUp, X, FileText, CheckCircle2, Plus, Mic, AlertCircle } from 'lucide-react'
-import { createClient } from '@/utils/supabase/client'
+import { getAccessToken } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import { Download, ImageIcon } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -65,14 +65,13 @@ export function ChatArea({
 
   const handleDownload = async (id: string, fileName: string) => {
     try {
-      const supabase = createClient()
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.access_token) return
-      
+      const accessToken = await getAccessToken()
+      if (!accessToken) return
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/content`, {
-        headers: { 'Authorization': `Bearer ${session.session.access_token}` }
+        headers: { 'Authorization': `Bearer ${accessToken}` }
       });
-      
+
       if (!res.ok) {
         showNotification('Failed to download file', 'error');
         return;
@@ -94,14 +93,13 @@ export function ChatArea({
 
   const handleView = async (id: string, fileName: string, fileType: string) => {
     try {
-      const supabase = createClient()
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.access_token) return
-      
+      const accessToken = await getAccessToken()
+      if (!accessToken) return
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/content`, {
-        headers: { 'Authorization': `Bearer ${session.session.access_token}` }
+        headers: { 'Authorization': `Bearer ${accessToken}` }
       });
-      
+
       if (!res.ok) {
         showNotification('File not found or cannot be viewed', 'error');
         return;
@@ -130,10 +128,9 @@ export function ChatArea({
     let newConversationId = ''
 
     try {
-      const supabase = createClient()
-      const { data: session, error: authError } = await supabase.auth.getSession()
+      const accessToken = await getAccessToken()
 
-      if (authError || !session?.session?.access_token) {
+      if (!accessToken) {
         throw new Error('Not authenticated')
       }
 
@@ -141,7 +138,7 @@ export function ChatArea({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.session?.access_token}`
+          'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
           messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content })),
@@ -151,7 +148,10 @@ export function ChatArea({
         })
       })
 
-      if (!res.ok) throw new Error('Failed to fetch response')
+      if (!res.ok) {
+        const errorText = await res.text()
+        throw new Error(`Failed to fetch response: ${res.status} ${errorText}`)
+      }
       if (!res.body) throw new Error("No response body")
 
       const reader = res.body.getReader()
@@ -236,10 +236,9 @@ export function ChatArea({
     for (const file of files) {
       setUploadStatus({ file: file.name, status: 'uploading' })
       try {
-        const supabase = createClient()
-        const { data: session, error: authError } = await supabase.auth.getSession()
+        const accessToken = await getAccessToken()
 
-        if (authError || !session?.session?.access_token) throw new Error('Not authenticated')
+        if (!accessToken) throw new Error('Not authenticated')
 
         const formData = new FormData()
         formData.append('file', file)
@@ -247,12 +246,20 @@ export function ChatArea({
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/upload`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${session.session?.access_token}`
+            'Authorization': `Bearer ${accessToken}`
           },
           body: formData
         })
 
         if (!res.ok) throw new Error('Upload failed')
+        
+        const json = await res.json()
+        if (json.data?.id) {
+          setDocumentIds(prev => {
+            if (!prev.includes(json.data.id)) return [...prev, json.data.id];
+            return prev;
+          });
+        }
 
         setUploadStatus({ file: file.name, status: 'success' })
       } catch (error) {
@@ -336,7 +343,7 @@ export function ChatArea({
       onDrop={handleDrop}
     >
       {/* Top Notification System */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center">
+      <div className="absolute top-16 md:top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center">
         {notification && (
           <div className={cn(
             "px-4 py-3 rounded-xl shadow-lg border text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-4",
@@ -401,10 +408,10 @@ export function ChatArea({
                         <div className="mt-2 w-[min(100%,500px)]">
                           <div className="border border-border/50 rounded-xl overflow-hidden bg-muted/30">
                             <div className="flex items-center px-4 py-2 border-b border-border/50 bg-muted/50">
-                              <span className="text-xs font-medium text-muted-foreground">Sources Found</span>
+                              <span className="text-xs font-medium text-muted-foreground">Sources</span>
                             </div>
                             <div className="p-2 space-y-1">
-                              {m.citations.map((c: any, i: number) => (
+                              {Array.from(new Map(m.citations.map((c: any) => [c.documentId || c.fileName || c.documentTitle || c.document, c])).values()).map((c: any, i: number) => (
                                 <div 
                                   key={i} 
                                   className="flex items-center gap-2 text-[13px] px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer text-foreground/80"
@@ -555,7 +562,7 @@ export function ChatArea({
             ) : previewDocument.fileType === 'pdf' ? (
               <iframe src={`${previewDocument.url}#toolbar=0`} className="w-full h-full border-none bg-zinc-900 rounded-b-xl" />
             ) : (
-              <iframe src={previewDocument.url} className="w-full h-full border-none bg-white rounded-b-xl" />
+              <iframe sandbox="" src={previewDocument.url} className="w-full h-full border-none bg-white rounded-b-xl" />
             )}
           </div>
         </div>

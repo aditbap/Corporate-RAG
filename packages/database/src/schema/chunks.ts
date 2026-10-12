@@ -19,7 +19,7 @@ export const documentChunks = pgTable('document_chunks', {
   embeddingModel: varchar('embedding_model', { length: 100 }),
   embedding: customType<{ data: number[]; driverData: string }>({
     dataType() {
-      return 'vector(768)';
+      return 'vector(2048)';
     },
     toDriver(value: number[]): string {
       return `[${value.join(',')}]`;

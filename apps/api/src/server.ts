@@ -6,6 +6,8 @@ import { documentRoutes } from './routes/documents.js';
 import { chatRoutes } from './routes/chat.js';
 import { conversationsRoutes } from './routes/conversations.js';
 import folderRoutes from './routes/folders.js';
+import { libraryRoutes } from './routes/libraries.js';
+import { registerMetrics } from './plugins/metrics.js';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '../../.env' });
@@ -40,6 +42,8 @@ export function buildServer(): FastifyInstance {
     return { status: 'ok', timestamp: new Date().toISOString() };
   });
 
+  registerMetrics(server);
+
   // API Routes (v1)
   server.register(async (api) => {
     // Add auth hook for all routes in this context
@@ -49,6 +53,7 @@ export function buildServer(): FastifyInstance {
     api.register(chatRoutes, { prefix: '/chat' });
     api.register(conversationsRoutes, { prefix: '/conversations' });
     api.register(folderRoutes, { prefix: '/folders' });
+    api.register(libraryRoutes, { prefix: '/libraries' });
   }, { prefix: '/api/v1' });
 
   return server;

@@ -1,0 +1,83 @@
+# Production hardening overlay. Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# `deploy.resources.limits` is a Swarm-mode key by convention; recent Docker
+# Compose v2 (>=2.20) applies it to plain `up` too, but if your installed
+# version doesn't, add `--compatibility` to the command above.
+#
+# What this changes vs. the base file:
+# - Binds every port to 127.0.0.1 instead of 0.0.0.0 — nothing here is meant to
+#   be reachable from outside the host directly. Put a reverse proxy (with TLS)
+#   in front of whatever actually needs to be public (apps/web, apps/api), and
+#   reach admin UIs (Grafana, Keycloak, MinIO console) over an SSH tunnel or VPN.
+# - Adds resource limits so one runaway container (the OCR sidecar is the
+#   likeliest culprit — PaddleOCR holds its models in memory) can't starve the
+#   rest of the stack on a single-server deployment.
+# - Swaps `restart: always` for `restart: unless-stopped` so an intentional
+#   `docker compose down` doesn't fight the restart policy.
+
+services:
+  postgres:
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  redis:
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  minio:
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  keycloak:
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8180:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  ocr:
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:8000"
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  clamav:
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3310:3310"
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  prometheus:
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3002:3000"

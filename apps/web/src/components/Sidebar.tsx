@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { Plus, MessageSquare, LogOut, User, Loader2, Trash2, Library } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/utils/supabase/client'
+import { getAccessToken } from '@/lib/auth-client'
 import { usePathname } from 'next/navigation'
+import { LibrarySwitcher } from '@/components/LibrarySwitcher'
 
 interface Conversation {
   id: string;
@@ -17,17 +18,16 @@ export function Sidebar({ logoutAction }: { logoutAction: () => void }) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
-  const supabase = createClient()
 
   useEffect(() => {
     async function fetchConversations() {
       try {
-        const { data: session } = await supabase.auth.getSession()
-        if (!session?.session?.access_token) return
+        const accessToken = await getAccessToken()
+        if (!accessToken) return
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/conversations/`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/conversations`, {
           headers: {
-            'Authorization': `Bearer ${session.session.access_token}`
+            'Authorization': `Bearer ${accessToken}`
           }
         })
 
@@ -52,11 +52,15 @@ export function Sidebar({ logoutAction }: { logoutAction: () => void }) {
     window.addEventListener('chat-created', handleChatCreated)
     
     return () => window.removeEventListener('chat-created', handleChatCreated)
-  }, [pathname, supabase]) // Refetch when pathname changes (e.g. after creating new chat)
+  }, [pathname]) // Refetch when pathname changes (e.g. after creating new chat)
 
   return (
-    <aside className="w-[260px] bg-zinc-950 border-r border-zinc-800 flex flex-col shrink-0">
-      <div className="p-4">
+    <aside className="w-[260px] h-full bg-zinc-950 border-r border-zinc-800 flex flex-col shrink-0">
+      <div className="pt-4">
+        <LibrarySwitcher />
+      </div>
+
+      <div className="px-4 pb-4">
         <Link href="/dashboard/chat">
           <Button variant="outline" className="w-full justify-start text-sm h-10 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-100 border-zinc-800 shadow-sm transition-all rounded-full">
             <Plus className="w-4 h-4 mr-2" />
@@ -97,13 +101,13 @@ export function Sidebar({ logoutAction }: { logoutAction: () => void }) {
               const handleDelete = async (e: React.MouseEvent) => {
                 e.preventDefault();
                 try {
-                  const { data: session } = await supabase.auth.getSession()
-                  if (!session?.session?.access_token) return
-          
+                  const accessToken = await getAccessToken()
+                  if (!accessToken) return
+
                   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/conversations/${conv.id}`, {
                     method: 'DELETE',
                     headers: {
-                      'Authorization': `Bearer ${session.session.access_token}`
+                      'Authorization': `Bearer ${accessToken}`
                     }
                   })
           

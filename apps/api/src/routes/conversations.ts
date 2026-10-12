@@ -3,6 +3,13 @@ import { requirePermissionMiddleware } from '@rag/auth';
 import { db, conversations, messages, eq, desc, and } from '@rag/database';
 
 export const conversationsRoutes: FastifyPluginAsync = async (fastify) => {
+  // Reject malformed ids up front: a non-UUID would otherwise reach Postgres and surface as a 500.
+  fastify.addHook('preValidation', async (request, reply) => {
+    const id = (request.params as { id?: string } | undefined)?.id;
+    if (id !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } });
+    }
+  });
   // Get all conversations for a user
   fastify.get('/', {
     preHandler: requirePermissionMiddleware('chat:read'), // Assuming 'chat:read' or similar permission exists

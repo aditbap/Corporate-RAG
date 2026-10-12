@@ -3,7 +3,7 @@
 import { ChatArea } from '@/components/ChatArea'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
+import { getAccessToken } from '@/lib/auth-client'
 import { Loader2 } from 'lucide-react'
 import { ChatAreaSkeleton } from '@/components/ChatAreaSkeleton'
 
@@ -17,14 +17,13 @@ export default function ExistingChatPage() {
     setLoading(true)
     async function fetchConversation() {
       try {
-        const supabase = createClient()
-        const { data: session } = await supabase.auth.getSession()
-        
-        if (!session?.session?.access_token) return
+        const accessToken = await getAccessToken()
+
+        if (!accessToken) return
 
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/conversations/${conversationId}/messages`, {
           headers: {
-            'Authorization': `Bearer ${session.session.access_token}`
+            'Authorization': `Bearer ${accessToken}`
           }
         })
 

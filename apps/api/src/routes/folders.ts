@@ -1,11 +1,12 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { FolderRepository } from '@rag/database';
+import { requirePermissionMiddleware } from '@rag/auth';
 
 export default async function (fastify: FastifyInstance) {
   const folderRepo = new FolderRepository();
 
-  fastify.get('/', async (request, reply) => {
+  fastify.get('/', { preHandler: requirePermissionMiddleware('documents:read') }, async (request, reply) => {
     const tenantId = request.user?.orgId || request.user?.id;
     if (!tenantId) {
       return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
@@ -32,7 +33,7 @@ export default async function (fastify: FastifyInstance) {
     }
   });
 
-  fastify.post('/', async (request, reply) => {
+  fastify.post('/', { preHandler: requirePermissionMiddleware('documents:create') }, async (request, reply) => {
     const tenantId = request.user?.orgId || request.user?.id;
     if (!tenantId) {
       return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
@@ -60,7 +61,7 @@ export default async function (fastify: FastifyInstance) {
     }
   });
 
-  fastify.delete('/:id', async (request, reply) => {
+  fastify.delete('/:id', { preHandler: requirePermissionMiddleware('documents:delete') }, async (request, reply) => {
     const tenantId = request.user?.orgId || request.user?.id;
     if (!tenantId) {
       return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
@@ -87,7 +88,7 @@ export default async function (fastify: FastifyInstance) {
     }
   });
 
-  fastify.patch('/:id', async (request, reply) => {
+  fastify.patch('/:id', { preHandler: requirePermissionMiddleware('documents:update') }, async (request, reply) => {
     const tenantId = request.user?.orgId || request.user?.id;
     if (!tenantId) {
       return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });

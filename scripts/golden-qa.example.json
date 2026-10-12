@@ -1,0 +1,13 @@
+{
+  "_comment": "Copy this file to golden-qa.json and replace with real queries against documents you've actually ingested. relevantDocumentIds should list every document id that correctly answers the query (usually just one, sometimes more).",
+  "queries": [
+    {
+      "query": "What is the leave carry-over policy?",
+      "relevantDocumentIds": ["REPLACE-WITH-REAL-DOCUMENT-UUID"]
+    },
+    {
+      "query": "What is policy number AB-1234?",
+      "relevantDocumentIds": ["REPLACE-WITH-REAL-DOCUMENT-UUID"]
+    }
+  ]
+}

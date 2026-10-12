@@ -21,9 +21,10 @@
     "@google/genai": "^2.16.0",
     "@langchain/textsplitters": "^1.0.1",
     "@rag/core": "workspace:*",
-    "@supabase/supabase-js": "^2.112.3",
     "cohere-ai": "^8.0.0",
+    "langfuse": "^3.38.20",
     "mammoth": "^1.12.1",
+    "minio": "^8.0.2",
     "pdf-parse": "^2.4.5"
   },
   "devDependencies": {

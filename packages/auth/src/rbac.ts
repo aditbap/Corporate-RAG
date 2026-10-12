@@ -8,26 +8,34 @@ export type Action =
   | 'chat:create'
   | 'chat:read'
   | 'settings:read'
-  | 'settings:update';
+  | 'settings:update'
+  | 'members:read'
+  | 'members:manage'
+  | 'library:update'
+  | 'library:delete';
 
 const ROLE_PERMISSIONS: Record<Role, Action[]> = {
   owner: [
     'documents:create', 'documents:read', 'documents:update', 'documents:delete',
     'chat:create', 'chat:read',
-    'settings:read', 'settings:update'
+    'settings:read', 'settings:update',
+    'members:read', 'members:manage', 'library:update', 'library:delete'
   ],
   admin: [
     'documents:create', 'documents:read', 'documents:update', 'documents:delete',
     'chat:create', 'chat:read',
-    'settings:read'
+    'settings:read',
+    'members:read', 'members:manage', 'library:update'
   ],
   member: [
     'documents:create', 'documents:read',
-    'chat:create', 'chat:read'
+    'chat:create', 'chat:read',
+    'members:read'
   ],
   viewer: [
     'documents:read',
-    'chat:read'
+    'chat:read',
+    'members:read'
   ]
 };
 

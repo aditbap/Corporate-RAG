@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
+import { getAccessToken } from '@/lib/auth-client'
 import { 
   Loader2, FileText, Trash2, File, UploadCloud, Search, 
   ChevronDown, Filter, LayoutGrid, List, MoreHorizontal, 
@@ -19,6 +19,8 @@ interface Document {
   status: string
   createdAt: string
   notes: string | null
+  uploaderName?: string | null
+  uploaderEmail?: string | null
 }
 
 interface FolderType {
@@ -82,23 +84,22 @@ export default function LibraryPage() {
   }
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
 
   const fetchContent = async () => {
     try {
       setLoading(true)
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.access_token) return
+      const accessToken = await getAccessToken()
+      if (!accessToken) return
 
       const folderQuery = currentFolderId ? `?parentId=${currentFolderId}` : '?parentId=null'
       const docQuery = currentFolderId ? `?folderId=${currentFolderId}` : '?folderId=null'
 
       const [docsRes, foldersRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${docQuery}`, {
-          headers: { 'Authorization': `Bearer ${session.session.access_token}` }
+          headers: { 'Authorization': `Bearer ${accessToken}` }
         }),
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/folders/${folderQuery}`, {
-          headers: { 'Authorization': `Bearer ${session.session.access_token}` }
+          headers: { 'Authorization': `Bearer ${accessToken}` }
         })
       ])
 
@@ -117,12 +118,12 @@ export default function LibraryPage() {
 
   const fetchAllFoldersForMove = async () => {
     try {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.access_token) return
+      const accessToken = await getAccessToken()
+      if (!accessToken) return
       
       // Fetching root folders for move destination as a simple approach
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/folders/?parentId=null`, {
-        headers: { 'Authorization': `Bearer ${session.session.access_token}` }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/folders?parentId=null`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
       })
       if (res.ok) {
         const data = await res.json()
@@ -150,11 +151,11 @@ export default function LibraryPage() {
   const handleCreateFolder = async () => {
     if (!createFolderName.trim()) return
     try {
-      const { data: session } = await supabase.auth.getSession()
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/folders/`, {
+      const accessToken = await getAccessToken()
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/folders`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session?.session?.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ name: createFolderName, parentId: currentFolderId })
@@ -171,8 +172,8 @@ export default function LibraryPage() {
 
   const handleMove = async () => {
     try {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.access_token) return
+      const accessToken = await getAccessToken()
+      if (!accessToken) return
 
       const docsToMove = moveTargetId ? [moveTargetId] : Array.from(selectedDocs)
       
@@ -180,7 +181,7 @@ export default function LibraryPage() {
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/move`, {
           method: 'PATCH',
           headers: {
-            'Authorization': `Bearer ${session.session.access_token}`,
+            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ folderId: selectedDestinationFolder })
@@ -198,11 +199,11 @@ export default function LibraryPage() {
 
   const handleView = async (id: string, fileName: string, fileType: string) => {
     try {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.access_token) return
+      const accessToken = await getAccessToken()
+      if (!accessToken) return
       
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/content`, {
-        headers: { 'Authorization': `Bearer ${session.session.access_token}` }
+        headers: { 'Authorization': `Bearer ${accessToken}` }
       });
       
       if (!res.ok) {
@@ -221,11 +222,11 @@ export default function LibraryPage() {
 
   const handleDownload = async (id: string, fileName: string) => {
     try {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.access_token) return
+      const accessToken = await getAccessToken()
+      if (!accessToken) return
       
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/content`, {
-        headers: { 'Authorization': `Bearer ${session.session.access_token}` }
+        headers: { 'Authorization': `Bearer ${accessToken}` }
       });
       
       if (!res.ok) {
@@ -249,14 +250,14 @@ export default function LibraryPage() {
 
   const executeDelete = async (id: string, isFolder: boolean = false) => {
     try {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.access_token) return
+      const accessToken = await getAccessToken()
+      if (!accessToken) return
 
       const endpoint = isFolder ? `/folders/${id}` : `/documents/${id}`
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${session.session.access_token}`
+          'Authorization': `Bearer ${accessToken}`
         }
       })
 
@@ -295,8 +296,8 @@ export default function LibraryPage() {
     setIsUploading(true)
     
     try {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.access_token) throw new Error('Not authenticated')
+      const accessToken = await getAccessToken()
+      if (!accessToken) throw new Error('Not authenticated')
 
       // Upload files sequentially to prevent overwhelming the server
       for (const file of files) {
@@ -309,7 +310,7 @@ export default function LibraryPage() {
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/upload`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${session.session?.access_token}`
+            'Authorization': `Bearer ${accessToken}`
           },
           body: formData
         })
@@ -713,7 +714,7 @@ export default function LibraryPage() {
         </header>
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between mb-4 h-10">
+        <div className="flex items-center justify-between mb-4 h-10 overflow-x-auto no-scrollbar gap-4">
           {selectedDocs.size > 0 ? (
             <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
               <button 
@@ -784,10 +785,10 @@ export default function LibraryPage() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto min-h-0 pb-12 mt-2">
+        <div className="flex-1 overflow-y-auto overflow-x-auto min-h-0 pb-12 mt-2">
           {loading ? (
             viewMode === 'list' ? (
-              <div className="w-full text-sm">
+              <div className="w-full text-sm min-w-[500px]">
                 <div className="flex items-center text-zinc-400 border-b border-zinc-800/80 pb-3 mb-2">
                   <div className="w-12 flex justify-center">
                     <div className="w-[18px] h-[18px] rounded-[4px] border-2 border-zinc-500/30" />
@@ -839,7 +840,7 @@ export default function LibraryPage() {
               <p className="text-sm">No files or folders found.</p>
             </div>
           ) : viewMode === 'list' ? (
-            <div className="w-full text-sm">
+            <div className="w-full text-sm min-w-[500px]">
               <div className="flex items-center text-zinc-400 border-b border-zinc-800/80 pb-3 mb-2">
                 <div 
                   onClick={toggleAll}
@@ -958,6 +959,9 @@ export default function LibraryPage() {
                       
                       <div className="w-32 text-zinc-400 shrink-0">
                         {formatDate(doc.createdAt)}
+                        {(doc.uploaderName || doc.uploaderEmail) && (
+                          <div className="text-[11px] text-zinc-500 truncate" title={doc.uploaderEmail ?? undefined}>by {doc.uploaderName || doc.uploaderEmail}</div>
+                        )}
                       </div>
                       
                       <div className="w-24 text-zinc-400 shrink-0 flex items-center justify-between relative pr-4">
@@ -1156,8 +1160,8 @@ export default function LibraryPage() {
                       {doc.fileName}
                     </h3>
                     <div className="text-xs text-zinc-500 flex items-center justify-between px-1">
-                      <span>{formatDate(doc.createdAt)}</span>
-                      <span>{formatSize(doc.fileSizeBytes)}</span>
+                      <span className="truncate" title={doc.uploaderEmail ?? undefined}>{formatDate(doc.createdAt)}{(doc.uploaderName || doc.uploaderEmail) ? ` · ${doc.uploaderName || doc.uploaderEmail}` : ''}</span>
+                      <span className="shrink-0">{formatSize(doc.fileSizeBytes)}</span>
                     </div>
                   </div>
                 )
@@ -1242,7 +1246,7 @@ export default function LibraryPage() {
               ) : previewDocument.fileType === 'pdf' ? (
                 <iframe src={`${previewDocument.url}#toolbar=0`} className="w-full h-full border-none bg-zinc-900 rounded-bl-xl" />
               ) : (
-                <iframe src={previewDocument.url} className="w-full h-full border-none bg-white rounded-bl-xl" />
+                <iframe sandbox="" src={previewDocument.url} className="w-full h-full border-none bg-white rounded-bl-xl" />
               )}
             </div>
             
@@ -1263,11 +1267,11 @@ export default function LibraryPage() {
                   onClick={async () => {
                     try {
                       setIsUploading(true);
-                      const { data: session } = await supabase.auth.getSession();
+                      const accessToken = await getAccessToken()
                       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${previewDocument.id}/notes`, {
                         method: 'PATCH',
                         headers: { 
-                          'Authorization': `Bearer ${session?.session?.access_token}`,
+                          'Authorization': `Bearer ${accessToken}`,
                           'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({ notes: previewDocument.notes })

@@ -1,4 +1,4 @@
-import './setup.js';
+import './setup.js'; // force reload again
 import { buildServer } from './server.js';
 const start = async () => {
   const server = buildServer();
