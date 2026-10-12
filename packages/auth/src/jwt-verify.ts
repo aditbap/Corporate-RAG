@@ -1,47 +1,66 @@
-import { createClient } from '@supabase/supabase-js';
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 
 export interface VerificationResult {
   userId: string;
   email?: string;
+  /** Display name from the OIDC `name` claim (falls back to preferred_username). */
+  name?: string;
   orgId?: string;
-  role?: string;
   isValid: boolean;
   error?: string;
 }
 
+let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+let cachedIssuer: string | null = null;
+
+function getKeycloakConfig() {
+  const baseUrl = process.env.KEYCLOAK_URL;
+  const realm = process.env.KEYCLOAK_REALM;
+  if (!baseUrl || !realm) {
+    throw new Error('KEYCLOAK_URL and KEYCLOAK_REALM must be set');
+  }
+  const issuer = `${baseUrl.replace(/\/$/, '')}/realms/${realm}`;
+  return { issuer, jwksUri: `${issuer}/protocol/openid-connect/certs` };
+}
+
+function getJwks() {
+  const { issuer, jwksUri } = getKeycloakConfig();
+  if (!jwks || cachedIssuer !== issuer) {
+    jwks = createRemoteJWKSet(new URL(jwksUri));
+    cachedIssuer = issuer;
+  }
+  return { jwks, issuer };
+}
+
 /**
- * Verify a Supabase JWT token using the Supabase API
+ * Verify a Keycloak-issued JWT locally against the realm's JWKS.
+ * No network call to an auth provider per-request — only the (cached) JWKS fetch.
+ *
+ * `org_id` must come from a custom protocol mapper configured on the Keycloak
+ * client/realm (there is no built-in multi-tenant org claim). Role is deliberately
+ * NOT read from the token — it is looked up from the `memberships` table per request
+ * (see packages/auth/src/middleware.ts), so a stale/forged claim can't grant access.
  */
 export async function verifyJwt(token: string): Promise<VerificationResult> {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseKey) {
-    return { userId: '', isValid: false, error: 'Supabase env vars not configured' };
-  }
-
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !user) {
-      throw error || new Error('User not found');
+    const { jwks, issuer } = getJwks();
+    const { payload } = await jwtVerify(token, jwks, { issuer });
+    const claims = payload as JWTPayload & { email?: string; name?: string; preferred_username?: string; org_id?: string };
+
+    if (!claims.sub) {
+      throw new Error('Token missing sub claim');
     }
-    
+
     return {
-      userId: user.id,
-      email: user.email,
-      orgId: user.app_metadata?.org_id || user.user_metadata?.org_id,
-      role: user.app_metadata?.role || user.user_metadata?.role,
+      userId: claims.sub,
+      email: claims.email,
+      name: claims.name?.trim() || claims.preferred_username?.trim() || undefined,
+      orgId: claims.org_id,
       isValid: true,
     };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Invalid token';
-    console.error('JWT Verification Failed:', errorMsg);
-    return {
-      userId: '',
-      isValid: false,
-      error: errorMsg,
-    };
+    console.error('JWT verification failed:', errorMsg);
+    return { userId: '', isValid: false, error: errorMsg };
   }
 }

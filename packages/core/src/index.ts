@@ -8,4 +8,5 @@ export * from './interfaces/embedding-provider.js';
 export * from './interfaces/reranker-provider.js';
 export * from './interfaces/document-parser.js';
 export * from './interfaces/chunker-provider.js';
+export * from './interfaces/storage-provider.js';
 export * from './constants.js';

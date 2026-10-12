@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: rag-postgres
     restart: always
     environment:
@@ -34,22 +32,111 @@ services:
       timeout: 5s
       retries: 5
 
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: rag-qdrant
+  minio:
+    # Upstream minio/minio images are no longer published on Docker Hub/Quay.
+    image: cgr.dev/chainguard/minio:latest
+    container_name: rag-minio
     restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "6333:6333" # REST API
-      - "6334:6334" # gRPC API
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console
     volumes:
-      - qdrant_data:/qdrant/storage
+      - minio_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/readyz || exit 1"]
+      test: ["CMD", "minio", "--version"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: rag-keycloak
+    restart: always
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8180:8080" # 8080 is taken by another project's container on this machine
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    healthcheck:
+      # Keycloak 26 moved /health off the main port onto the management port
+      # (9000), which isn't published here — this probe just checks the main
+      # port accepts connections at all.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ocr:
+    build:
+      context: ../ocr
+    container_name: rag-ocr
+    restart: always
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s # first boot downloads PaddleOCR's detection/recognition models
+
+  clamav:
+    image: clamav/clamav:stable
+    container_name: rag-clamav
+    restart: always
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav_data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s # first boot downloads virus definitions — this is slow
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: rag-prometheus
+    restart: always
+    extra_hosts:
+      # host.docker.internal resolves out of the box on Docker Desktop
+      # (macOS/Windows); this makes it also resolve on Linux (e.g. the ML310e
+      # deployment target), where it's otherwise not defined.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: rag-grafana
+    restart: always
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3002:3000" # 3000 is taken by apps/web's Next.js dev server
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   redis_data:
-  qdrant_data:
+  minio_data:
+  keycloak_data:
+  clamav_data:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'rag-api'
+    metrics_path: /metrics
+    static_configs:
+      # apps/api runs on the host via `pnpm dev`, not as a container in this
+      # compose file — host.docker.internal is Docker Desktop's bridge back to
+      # the host (works on macOS/Windows; on Linux add `extra_hosts:
+      # ["host.docker.internal:host-gateway"]` to the prometheus service).
+      - targets: ['host.docker.internal:3001']

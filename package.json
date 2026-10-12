@@ -20,6 +20,7 @@
     "db:generate": "pnpm --filter @rag/database db:generate",
     "db:migrate": "pnpm --filter @rag/database db:migrate",
     "db:push": "pnpm --filter @rag/database db:push",
+    "eval:retrieval": "tsx scripts/evaluate-retrieval.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""
   },

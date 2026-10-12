@@ -1,15 +1,37 @@
 import { FastifyPluginAsync } from 'fastify';
 import '@fastify/multipart';
 import { requirePermissionMiddleware } from '@rag/auth';
-import { DocumentRepository, JobRepository, db, documentVersions, users, organizations } from '@rag/database';
-import { ingestionQueue } from '../queue.js';
+import { DocumentRepository, JobRepository, FolderRepository } from '@rag/database';
+import { MinioStorageProvider } from '@rag/providers';
+import { ingestionQueue, redisConnection } from '../queue.js';
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-import { pipeline } from 'stream/promises';
+import { Transform } from 'stream';
+
+/**
+ * Hash a stream as it passes through. Using a pass-through (rather than a
+ * 'data' listener on the source) keeps the source paused until the storage
+ * client starts reading — a bare 'data' listener switches the stream to flowing
+ * mode immediately and the bytes are gone before putObject attaches.
+ */
+function hashingStream(hash: crypto.Hash): Transform {
+  return new Transform({
+    transform(chunk, _enc, cb) {
+      hash.update(chunk);
+      cb(null, chunk);
+    },
+  });
+}
+
 
 const docRepo = new DocumentRepository();
 const jobRepo = new JobRepository();
+const storage = MinioStorageProvider.fromEnv();
+const folderRepo = new FolderRepository();
+
+/** Invalidate cached chat answers for an org (see chat.ts `cacheVersion`). Best-effort. */
+async function bumpCacheVersion(orgId: string) {
+  try { await redisConnection.incr(`rag:cache-version:${orgId}`); } catch { /* cache is best-effort */ }
+}
 
 // Define allowed mime types per our implementation plan
 const ALLOWED_MIME_TYPES = [
@@ -17,10 +39,20 @@ const ALLOWED_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
   'text/markdown',
-  'text/html'
+  'text/html',
+  'image/jpeg',
+  'image/png',
+  'image/webp'
 ];
 
 export const documentRoutes: FastifyPluginAsync = async (fastify) => {
+  // Reject malformed ids up front: a non-UUID would otherwise reach Postgres and surface as a 500.
+  fastify.addHook('preValidation', async (request, reply) => {
+    const id = (request.params as { id?: string } | undefined)?.id;
+    if (id !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } });
+    }
+  });
   // Get all documents
   fastify.get('/', {
     preHandler: requirePermissionMiddleware('documents:read'),
@@ -32,7 +64,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
     const { limit, offset, folderId } = request.query as any;
     const parsedFolderId = folderId === 'null' ? null : (folderId || undefined);
-    const docs = await docRepo.list(orgId, parseInt(limit) || 20, parseInt(offset) || 0, parsedFolderId);
+    const docs = await docRepo.listWithUploader(orgId, parseInt(limit) || 20, parseInt(offset) || 0, parsedFolderId);
     return { data: docs };
   });
 
@@ -45,24 +77,9 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'User does not belong to an organization' } });
     }
     
-    const userId = request.user?.id;
-    if (userId) {
-      try {
-        await db.insert(users).values({
-          id: userId,
-          email: request.user?.email || `user-${userId}@example.com`,
-          fullName: request.user?.email || 'User',
-        }).onConflictDoNothing();
-        
-        await db.insert(organizations).values({
-          id: orgId,
-          name: 'Personal Workspace',
-          slug: `personal-${orgId}`,
-        }).onConflictDoNothing();
-      } catch (err) {
-        request.log.error(err, 'Failed to upsert user and org');
-      }
-    }
+    // User/org/membership provisioning for the personal-workspace fallback now
+    // happens centrally in the `authenticate` middleware (packages/auth), before
+    // requirePermissionMiddleware runs — see ensurePersonalWorkspace there.
 
     const data = await (request as any).file();
     if (!data) {
@@ -73,33 +90,31 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: `Unsupported file type: ${data.mimetype}` } });
     }
 
-    // In a real implementation, we stream to S3/GCS.
-    // For this local foundation, we save to disk in a temporary directory
-    const uploadDir = path.join(process.cwd(), 'tmp', 'uploads', orgId);
-    await fs.promises.mkdir(uploadDir, { recursive: true });
-    
-    // Hash the file as we write it
-    const hash = crypto.createHash('sha256');
-    const tempFilePath = path.join(uploadDir, `${crypto.randomUUID()}-${data.filename}`);
-    const writeStream = fs.createWriteStream(tempFilePath);
+    const objectKey = `${orgId}/${crypto.randomUUID()}-${data.filename}`;
 
-    data.file.on('data', (chunk: Buffer) => hash.update(chunk));
-    
+    // Hash the file as it streams through to MinIO
+    const hash = crypto.createHash('sha256');
+    const hashed = data.file.pipe(hashingStream(hash));
+    data.file.on('error', (err: Error) => hashed.destroy(err));
+
+    let objectInfo;
     try {
-      await pipeline(data.file, writeStream);
+      objectInfo = await storage.upload(objectKey, hashed, data.mimetype);
     } catch (err) {
-      request.log.error(err, 'Failed to save file');
+      request.log.error(err, 'Failed to upload file to storage');
       return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Failed to process file' } });
     }
 
     const fileHash = hash.digest('hex');
-    const stats = await fs.promises.stat(tempFilePath);
-    const fileSizeBytes = stats.size;
+    const fileSizeBytes = objectInfo.sizeBytes;
 
     const fileType = data.mimetype.includes('pdf') ? 'pdf' :
                      data.mimetype.includes('word') ? 'docx' :
                      data.mimetype.includes('html') ? 'html' :
-                     data.mimetype.includes('markdown') ? 'md' : 'txt';
+                     data.mimetype.includes('markdown') ? 'md' :
+                     data.mimetype.includes('jpeg') ? 'jpeg' :
+                     data.mimetype.includes('png') ? 'png' :
+                     data.mimetype.includes('webp') ? 'webp' : 'txt';
 
     const folderId = data.fields?.folderId?.value;
 
@@ -121,21 +136,13 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Failed to create document record' } });
     }
 
-    // We assume version creation happens here in a full flow.
-    // For Phase 4/5 testing, we need to create a document_versions record so that chunk insertion doesn't fail due to FK constraints.
-    // We use the documentId as versionId for our simple test phase
-    const versionId = doc.id;
-    await db.insert(documentVersions).values({
-      id: versionId,
-      documentId: doc.id,
-      orgId: doc.orgId,
-      versionNumber: 1,
-      filePath: tempFilePath,
+    const version = await docRepo.createNewVersion(orgId, doc.id, {
+      filePath: objectKey,
       fileHash,
       fileSizeBytes,
-      isActive: true,
     });
-    
+    const versionId = version.id;
+
     const jobId = crypto.randomUUID();
     
     // Create Job record in DB to track progress
@@ -160,7 +167,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
         documentId: doc.id,
         versionId: versionId,
         orgId,
-        filePath: tempFilePath,
+        filePath: objectKey,
         fileType,
       },
       {
@@ -169,6 +176,108 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
     );
 
     return reply.status(201).send({ data: doc, jobId: job.id });
+  });
+
+  // Upload a replacement file for an existing document — creates a new version,
+  // deactivates the previous one, and re-triggers ingestion. The document id
+  // (and its conversation citations/history) stays stable across versions.
+  fastify.post('/:id/versions', {
+    preHandler: requirePermissionMiddleware('documents:update'),
+  }, async (request, reply) => {
+    const orgId = request.user?.orgId || request.user?.id;
+    if (!orgId) {
+      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'User does not belong to an organization' } });
+    }
+
+    const { id } = request.params as { id: string };
+    const existingDoc = await docRepo.findById(orgId, id);
+    if (!existingDoc) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
+    }
+
+    const data = await (request as any).file();
+    if (!data) {
+      return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'No file uploaded' } });
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(data.mimetype)) {
+      return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: `Unsupported file type: ${data.mimetype}` } });
+    }
+
+    const objectKey = `${orgId}/${crypto.randomUUID()}-${data.filename}`;
+
+    const hash = crypto.createHash('sha256');
+    const hashed = data.file.pipe(hashingStream(hash));
+    data.file.on('error', (err: Error) => hashed.destroy(err));
+
+    let objectInfo;
+    try {
+      objectInfo = await storage.upload(objectKey, hashed, data.mimetype);
+    } catch (err) {
+      request.log.error(err, 'Failed to upload file to storage');
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Failed to process file' } });
+    }
+
+    const fileHash = hash.digest('hex');
+    const fileSizeBytes = objectInfo.sizeBytes;
+
+    const version = await docRepo.createNewVersion(orgId, id, {
+      filePath: objectKey,
+      fileHash,
+      fileSizeBytes,
+    });
+
+    const doc = await docRepo.updateFileInfo(orgId, id, { fileHash, fileSizeBytes, status: 'uploaded' });
+
+    const jobId = crypto.randomUUID();
+    try {
+      await jobRepo.create(orgId, {
+        id: jobId,
+        documentId: id,
+        versionId: version.id,
+        orgId,
+        status: 'pending',
+        idempotencyKey: crypto.randomUUID()
+      });
+    } catch (err) {
+      request.log.error(err, 'Failed to create job tracking record');
+    }
+
+    const job = await ingestionQueue.add(
+      'ingest-document',
+      {
+        jobId,
+        documentId: id,
+        versionId: version.id,
+        orgId,
+        filePath: objectKey,
+        fileType: existingDoc.fileType,
+      },
+      {
+        jobId: crypto.randomUUID(),
+      }
+    );
+
+    return reply.status(201).send({ data: doc, version, jobId: job.id });
+  });
+
+  // List a document's version history
+  fastify.get('/:id/versions', {
+    preHandler: requirePermissionMiddleware('documents:read'),
+  }, async (request, reply) => {
+    const orgId = request.user?.orgId || request.user?.id;
+    if (!orgId) {
+      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'User does not belong to an organization' } });
+    }
+
+    const { id } = request.params as { id: string };
+    const doc = await docRepo.findById(orgId, id);
+    if (!doc) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
+    }
+
+    const versions = await docRepo.listVersions(orgId, id);
+    return { data: versions };
   });
 
   // Move a document
@@ -182,7 +291,13 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
     const { id } = request.params as { id: string };
     const { folderId } = request.body as { folderId: string | null };
-
+    if (folderId != null) {
+      // The destination must be a folder in *this* library, never another tenant's.
+      const folder = await folderRepo.getById(orgId, folderId).catch(() => null);
+      if (!folder) {
+        return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Folder not found' } });
+      }
+    }
     const doc = await docRepo.move(orgId, id, folderId);
     if (!doc) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
@@ -230,6 +345,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       if (!deletedDoc) {
         return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
       }
+      await bumpCacheVersion(orgId);
       return { success: true };
     } catch (err) {
       request.log.error(err, 'Failed to delete document');
@@ -258,29 +374,26 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
-      let actualPath = version.filePath;
-      if (actualPath.includes('tmp/uploads/')) {
-        const relative = actualPath.substring(actualPath.indexOf('tmp/uploads/'));
-        actualPath = path.join(process.cwd(), relative);
-      }
-      
+      let stream;
       try {
-        await fs.promises.access(actualPath);
+        stream = await storage.download(version.filePath);
       } catch (err) {
-        return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'File is missing from server' } });
+        return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'File is missing from storage' } });
       }
 
-      const stream = fs.createReadStream(actualPath);
-      
       let contentType = 'application/octet-stream';
       if (doc.fileType === 'pdf') contentType = 'application/pdf';
       else if (doc.fileType === 'docx') contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       else if (doc.fileType === 'txt') contentType = 'text/plain';
       else if (doc.fileType === 'md') contentType = 'text/markdown';
-      else if (doc.fileType === 'html') contentType = 'text/html';
+      // Uploaded HTML is served as plain text: members of a shared library can view each
+      // other's files, and rendering it would let one member run script as another.
+      else if (doc.fileType === 'html') contentType = 'text/plain';
       else if (doc.fileType && doc.fileType.includes('image')) contentType = `image/${doc.fileType.replace('image/', '')}`;
 
       reply.header('Content-Type', contentType);
+      reply.header('X-Content-Type-Options', 'nosniff');
+      reply.header('Content-Security-Policy', "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'");
       
       // Safely encode filename to prevent HTTP header character errors
       const safeFileName = encodeURIComponent(doc.fileName);
@@ -288,7 +401,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.send(stream);
     } catch (err: any) {
       request.log.error(err, 'Failed to read file');
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: err.message, stack: err.stack } });
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Failed to read file' } });
     }
   });
 };

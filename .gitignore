@@ -76,3 +76,7 @@ update-*.ts
 uploads/
 *.pdf
 *.csv
+
+# Local env backups (contain real credentials)
+.env*.bak*
+*.bak-pre-local
