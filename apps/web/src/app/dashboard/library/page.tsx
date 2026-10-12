@@ -57,6 +57,8 @@ export default function LibraryPage() {
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false)
+  const [renameTarget, setRenameTarget] = useState<{ id: string; isFolder: boolean } | null>(null)
+  const [renameValue, setRenameValue] = useState('')
   const [createFolderName, setCreateFolderName] = useState('')
   
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false)
@@ -155,6 +157,33 @@ export default function LibraryPage() {
     return () => window.removeEventListener('click', closeDropdown)
   }, [])
 
+  const openRename = (id: string, currentName: string, isFolder: boolean) => {
+    setRenameTarget({ id, isFolder })
+    setRenameValue(currentName)
+  }
+
+  const handleRename = async () => {
+    if (!renameTarget || !renameValue.trim()) return
+    try {
+      const accessToken = await getAccessToken()
+      const path = renameTarget.isFolder ? `folders/${renameTarget.id}` : `documents/${renameTarget.id}`
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${path}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: renameValue.trim() }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error?.message || 'Rename failed')
+      }
+      setRenameTarget(null)
+      showNotification('Renamed', 'success')
+      fetchContent()
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : 'Rename failed', 'error')
+    }
+  }
+
   const handleCreateFolder = async () => {
     if (!createFolderName.trim()) return
     try {
@@ -171,9 +200,13 @@ export default function LibraryPage() {
         setCreateFolderName('')
         setIsCreateFolderModalOpen(false)
         fetchContent()
+      } else {
+        const data = await res.json().catch(() => null)
+        showNotification(data?.error?.message || 'Could not create folder', 'error')
       }
     } catch (e) {
       console.error(e)
+      showNotification('Could not create folder', 'error')
     }
   }
 
@@ -522,6 +555,42 @@ export default function LibraryPage() {
       )}
 
       {/* Add Note Modal */}
+      {renameTarget && (
+        <div className="absolute inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4" onClick={() => setRenameTarget(null)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-semibold">Rename {renameTarget.isFolder ? 'folder' : 'document'}</h2>
+              <button onClick={() => setRenameTarget(null)} className="text-zinc-500 hover:text-zinc-300">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <input
+              type="text"
+              aria-label="New name"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleRename() }}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-700 transition-colors mb-6"
+              autoFocus
+            />
+
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setRenameTarget(null)} className="px-4 py-2 text-sm font-medium hover:bg-zinc-800 rounded-lg transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={handleRename}
+                disabled={!renameValue.trim()}
+                className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors disabled:opacity-50"
+              >
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isAddNoteModalOpen && (
         <div className="absolute inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl flex flex-col max-h-[90vh]">
@@ -922,7 +991,7 @@ export default function LibraryPage() {
 
                       {access.canManageFolders && activeDropdown === folder.id && (
                         <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                          <button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                          <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(folder.id, folder.name, true); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                             <Edit2 className="w-4 h-4"/> Rename
                           </button>
                           <div className="h-px bg-zinc-800/80 my-1.5 mx-2" />
@@ -1001,7 +1070,7 @@ export default function LibraryPage() {
                             <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleDownload(doc.id, doc.fileName); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                               <Download className="w-4 h-4"/> Download
                             </button>
-                            {access.canMutateDoc(doc.uploadedBy) && (<><button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                            {access.canMutateDoc(doc.uploadedBy) && (<><button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(doc.id, doc.fileName, false); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                               <Edit2 className="w-4 h-4"/> Rename
                             </button>
                             <button 
@@ -1061,7 +1130,7 @@ export default function LibraryPage() {
 
                     {access.canManageFolders && activeDropdown === folder.id && (
                       <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in">
-                        <button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                        <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(folder.id, folder.name, true); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                           <Edit2 className="w-4 h-4"/> Rename
                         </button>
                         <div className="h-px bg-zinc-800/80 my-1.5 mx-2" />
@@ -1131,7 +1200,7 @@ export default function LibraryPage() {
                           <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleDownload(doc.id, doc.fileName); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                             <Download className="w-4 h-4"/> Download
                           </button>
-                          {access.canMutateDoc(doc.uploadedBy) && (<><button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                          {access.canMutateDoc(doc.uploadedBy) && (<><button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(doc.id, doc.fileName, false); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                             <Edit2 className="w-4 h-4"/> Rename
                           </button>
                           <button 

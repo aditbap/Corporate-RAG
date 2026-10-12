@@ -127,6 +127,53 @@ describe('document & folder permissions', () => {
   });
 });
 
+describe('renaming', () => {
+  it('members rename their own documents, admins any; others are refused', async () => {
+    const mine = (await upload(member, lib, 'old-name.txt', 'text/plain', 'rename me')).body.data.id;
+    const adminsDoc = (await upload(admin, lib, 'admin-old.txt', 'text/plain', 'admin doc')).body.data.id;
+    const rename = (u: TestUser, id: string, name: unknown) => api(u, 'PATCH', `/documents/${id}`, { org: lib, body: { name } });
+
+    const r = await rename(member, mine, '  New name.txt  ');
+    assert.equal(r.status, 200);
+    assert.equal(r.body.data.fileName, 'New name.txt', 'trimmed and applied');
+    assert.equal(r.body.data.title, 'New name.txt');
+    const listed = (await api(owner, 'GET', '/documents', { org: lib })).body.data.find((d: { id: string }) => d.id === mine);
+    assert.equal(listed.fileName, 'New name.txt');
+
+    assert.equal((await rename(member, adminsDoc, 'hijack.txt')).status, 403, "member cannot rename someone else's document");
+    assert.equal((await rename(viewer, mine, 'viewer.txt')).status, 403);
+    assert.equal((await rename(admin, mine, 'by-admin.txt')).status, 200);
+    assert.equal((await rename(outsider, mine, 'x.txt')).status, 403, 'non-member of this library');
+  });
+
+  it('rejects empty, oversized, slash-containing and non-string names; unknown ids are 404', async () => {
+    const id = (await upload(member, lib, 'valid.txt', 'text/plain', 'x')).body.data.id;
+    const rename = (name: unknown) => api(member, 'PATCH', `/documents/${id}`, { org: lib, body: { name } });
+    for (const bad of ['', '   ', 'a/b.txt', 'a\\b.txt', 'x'.repeat(501), 42, null, undefined]) {
+      assert.equal((await rename(bad)).status, 400, JSON.stringify(bad));
+    }
+    assert.equal((await api(member, 'PATCH', '/documents/00000000-0000-0000-0000-000000000000', { org: lib, body: { name: 'ok.txt' } })).status, 404);
+    assert.equal((await api(member, 'PATCH', '/documents/not-a-uuid', { org: lib, body: { name: 'ok.txt' } })).status, 404);
+  });
+});
+
+describe('upload rate limit', { skip: !process.env.TEST_UPLOAD_LIMIT && 'set TEST_UPLOAD_LIMIT to the API\'s RATE_LIMIT_UPLOAD_PER_MINUTE to run' }, () => {
+  it('blocks uploads beyond the per-minute limit, per user, and does not affect other users', async () => {
+    const limit = Number(process.env.TEST_UPLOAD_LIMIT);
+    const solo = await createUser('uploader');
+    const soloLib = await createLibrary(solo, 'Rate limit lib');
+    for (let i = 0; i < limit; i++) {
+      assert.equal((await upload(solo, soloLib, `r${i}.txt`, 'text/plain', `doc ${i}`)).status, 201, `upload ${i + 1} within the limit`);
+    }
+    const over = await upload(solo, soloLib, 'over.txt', 'text/plain', 'one too many');
+    assert.equal(over.status, 429);
+    assert.equal(over.body.error.code, 'TOO_MANY_REQUESTS');
+    // limits are per user per library: a teammate and the same user elsewhere are unaffected
+    await addMember(solo, soloLib, viewer, 'member');
+    assert.equal((await upload(viewer, soloLib, 'teammate.txt', 'text/plain', 'ok')).status, 201);
+  });
+});
+
 describe('input validation', () => {
   it('rejects malformed chat bodies with 400 instead of crashing', async () => {
     const post = (body: unknown) => api(owner, 'POST', '/chat/completions', { org: lib, body });

@@ -107,6 +107,15 @@ export class DocumentRepository extends BaseRepository {
     return result;
   }
 
+  async rename(tenantId: string, id: string, name: string) {
+    this.requireTenant(tenantId);
+    const [result] = await this.db.update(documents)
+      .set({ title: name, fileName: name, updatedAt: new Date() })
+      .where(and(eq(documents.id, id), eq(documents.orgId, tenantId), eq(documents.isDeleted, false)))
+      .returning();
+    return result;
+  }
+
   async updateStatus(tenantId: string, id: string, status: typeof documents.$inferSelect['status'], errorMessage?: string | null) {
     this.requireTenant(tenantId);
     const [result] = await this.db.update(documents)
