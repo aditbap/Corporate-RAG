@@ -5,6 +5,7 @@ import { NvidiaEmbeddingProvider, CloudflareLLMProvider, CohereRerankerProvider,
 import type { ScoredChunk } from '@rag/core';
 import crypto from 'crypto';
 import { redisConnection } from '../queue.js';
+import { consumeRateLimit } from '../lib/rate-limit.js';
 import { ragPipelineDuration, ragCacheHits } from '../plugins/metrics.js';
 
 const chunkRepo = new ChunkRepository();
@@ -153,18 +154,10 @@ export const chatRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Last message must be from user' } });
     }
 
-    // Rate Limiting
-    try {
-      const rateLimitKey = `rate-limit:chat:${orgId}:${userId}`;
-      const currentLimit = await redisConnection.incr(rateLimitKey);
-      if (currentLimit === 1) {
-        await redisConnection.expire(rateLimitKey, 60); // 1 minute window
-      }
-      if (currentLimit > CHAT_RATE_LIMIT_PER_MINUTE) {
-        return reply.status(429).send({ error: { code: 'TOO_MANY_REQUESTS', message: 'Rate limit exceeded. Please try again in a minute.' } });
-      }
-    } catch (err) {
-      request.log.warn(err, 'Rate limiting failed, allowing request');
+    // Rate limiting
+    const limit = await consumeRateLimit(redisConnection, `rate-limit:chat:${orgId}:${userId}`, CHAT_RATE_LIMIT_PER_MINUTE, 60);
+    if (!limit.allowed) {
+      return reply.status(429).send({ error: { code: 'TOO_MANY_REQUESTS', message: 'Rate limit exceeded. Please try again in a minute.' } });
     }
 
     const userQuery = lastMessage.content;

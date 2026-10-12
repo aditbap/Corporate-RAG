@@ -4,6 +4,7 @@ import { requirePermissionMiddleware, requireUser, canMutateDocument, type Role 
 import { DocumentRepository, JobRepository, FolderRepository } from '@rag/database';
 import { MinioStorageProvider } from '@rag/providers';
 import { ingestionQueue, redisConnection } from '../queue.js';
+import { consumeRateLimit } from '../lib/rate-limit.js';
 import crypto from 'crypto';
 import { Transform } from 'stream';
 
@@ -27,6 +28,15 @@ const docRepo = new DocumentRepository();
 const jobRepo = new JobRepository();
 const storage = MinioStorageProvider.fromEnv();
 const folderRepo = new FolderRepository();
+const UPLOAD_RATE_LIMIT_PER_MINUTE = parseInt(process.env.RATE_LIMIT_UPLOAD_PER_MINUTE || '30', 10);
+
+/** Per user, per library: each upload starts a (paid) embedding job, so cap the rate. */
+async function uploadRateLimited(request: FastifyRequest, reply: FastifyReply, orgId: string): Promise<boolean> {
+  const limit = await consumeRateLimit(redisConnection, `rate-limit:upload:${orgId}:${requireUser(request).id}`, UPLOAD_RATE_LIMIT_PER_MINUTE, 60);
+  if (limit.allowed) return false;
+  reply.status(429).send({ error: { code: 'TOO_MANY_REQUESTS', message: 'Too many uploads. Please try again in a minute.', requestId: request.id } });
+  return true;
+}
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Invalidate cached chat answers for an org (see chat.ts `cacheVersion`). Best-effort. */
@@ -90,6 +100,8 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
     // User/org/membership provisioning for the personal-workspace fallback now
     // happens centrally in the `authenticate` middleware (packages/auth), before
     // requirePermissionMiddleware runs — see ensurePersonalWorkspace there.
+
+    if (await uploadRateLimited(request, reply, orgId)) return;
 
     const data = await request.file();
     if (!data) {
@@ -217,6 +229,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
     }
     if (denyIfNotAllowed(request, reply, 'update', existingDoc.uploadedBy)) return;
+    if (await uploadRateLimited(request, reply, orgId)) return;
 
     const data = await request.file();
     if (!data) {
@@ -301,6 +314,35 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
     const versions = await docRepo.listVersions(orgId, id);
     return { data: versions };
+  });
+
+  // Rename a document (display name only — the stored object and file type are unchanged)
+  fastify.patch('/:id', {
+    preHandler: requirePermissionMiddleware(['documents:update', 'documents:update:own']),
+  }, async (request, reply) => {
+    const orgId = request.user?.orgId || request.user?.id;
+    if (!orgId) {
+      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'User does not belong to an organization' } });
+    }
+
+    const { id } = request.params as { id: string };
+    const { name } = (request.body ?? {}) as { name?: unknown };
+    const trimmed = typeof name === 'string' ? name.trim() : '';
+    // eslint-disable-next-line no-control-regex
+    if (!trimmed || trimmed.length > 500 || /[\\/\x00-\x1f]/.test(trimmed)) {
+      return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'name must be 1-500 characters without slashes or control characters' } });
+    }
+
+    const target = await docRepo.findById(orgId, id);
+    if (!target) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
+    }
+    if (denyIfNotAllowed(request, reply, 'update', target.uploadedBy)) return;
+
+    const doc = await docRepo.rename(orgId, id, trimmed);
+    // Cached chat answers embed the old name in their citations.
+    await bumpCacheVersion(orgId);
+    return { data: doc };
   });
 
   // Move a document
