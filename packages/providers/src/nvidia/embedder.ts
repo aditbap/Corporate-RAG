@@ -53,7 +53,8 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
     } catch (err: any) {
       if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
         throw new Error(
-          `NVIDIA embeddings request timed out after ${this.timeoutMs}ms (model: ${this.model})`
+          `NVIDIA embeddings request timed out after ${this.timeoutMs}ms (model: ${this.model})`,
+          { cause: err }
         );
       }
       throw err;

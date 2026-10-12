@@ -29,7 +29,7 @@ function getRerankerProvider(): CohereRerankerProvider | null {
   try {
     rerankerProvider = new CohereRerankerProvider();
     return rerankerProvider;
-  } catch (err) {
+  } catch {
     console.warn('CohereRerankerProvider not available (COHERE_API_KEY missing?), reranking disabled');
     return null;
   }

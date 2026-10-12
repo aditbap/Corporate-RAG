@@ -61,7 +61,7 @@ export default async function (fastify: FastifyInstance) {
     }
   });
 
-  fastify.delete('/:id', { preHandler: requirePermissionMiddleware('documents:delete') }, async (request, reply) => {
+  fastify.delete('/:id', { preHandler: requirePermissionMiddleware('folders:manage') }, async (request, reply) => {
     const tenantId = request.user?.orgId || request.user?.id;
     if (!tenantId) {
       return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
@@ -88,7 +88,7 @@ export default async function (fastify: FastifyInstance) {
     }
   });
 
-  fastify.patch('/:id', { preHandler: requirePermissionMiddleware('documents:update') }, async (request, reply) => {
+  fastify.patch('/:id', { preHandler: requirePermissionMiddleware('folders:manage') }, async (request, reply) => {
     const tenantId = request.user?.orgId || request.user?.id;
     if (!tenantId) {
       return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });

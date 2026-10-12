@@ -135,6 +135,8 @@ export default function LibraryPage() {
   }
 
   useEffect(() => {
+    // Fetch-on-folder-change: fetchContent toggles its own loading state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchContent()
     setSelectedDocs(new Set())
   }, [currentFolderId])
@@ -265,7 +267,7 @@ export default function LibraryPage() {
         const data = await res.json().catch(() => null);
         throw new Error(data?.error?.message || 'Failed to delete');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete:', error)
       throw error;
     }
@@ -284,8 +286,8 @@ export default function LibraryPage() {
         await executeDelete(deleteConfirm.id, deleteConfirm.isFolder)
         showNotification(`Deleted ${deleteConfirm.isFolder ? 'folder' : 'document'}`, 'success')
       }
-    } catch (error: any) {
-      showNotification(error.message || 'Failed to delete', 'error')
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : 'Failed to delete', 'error')
     } finally {
       setDeleteConfirm({ isOpen: false, type: 'single' })
       fetchContent()
@@ -747,7 +749,7 @@ export default function LibraryPage() {
               {['All', 'Images', 'Documents'].map(tab => (
                 <button 
                   key={tab}
-                  onClick={() => setActiveTab(tab as any)}
+                  onClick={() => setActiveTab(tab as typeof activeTab)}
                   className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeTab === tab ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'}`}
                 >
                   {tab}

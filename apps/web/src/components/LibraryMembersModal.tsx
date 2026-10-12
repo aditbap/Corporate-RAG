@@ -52,6 +52,8 @@ export function LibraryMembersModal({
   }, [library.id, canManage])
 
   useEffect(() => {
+    // Fetch-on-mount; state is only set after the awaited requests resolve.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
   }, [load])
 

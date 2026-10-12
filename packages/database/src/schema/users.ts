@@ -1,15 +1,19 @@
-import { pgTable, uuid, varchar, text, boolean, integer, timestamp, pgEnum, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, integer, timestamp, pgEnum, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { organizations } from './organizations';
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey(), // Matches the Keycloak JWT `sub` claim
-  email: varchar('email', { length: 320 }).notNull().unique(),
+  // Not unique: identity is the IdP `sub`. Re-creating an account in the IdP with a reused
+  // email yields a new `sub`; a unique email would make provisioning that user fail.
+  email: varchar('email', { length: 320 }).notNull(),
   fullName: varchar('full_name', { length: 255 }),
   avatarUrl: text('avatar_url'),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => ({
+  emailIdx: index('users_email_idx').on(t.email),
+}));
 
 export const membershipRoleEnum = pgEnum('membership_role', ['owner', 'admin', 'member', 'viewer']);
 

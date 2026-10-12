@@ -109,7 +109,7 @@ export class CloudflareLLMProvider implements LLMProvider {
                 isFinal: false,
                 model: this.model
               };
-            } catch (e) { }
+            } catch { /* ignore non-JSON SSE lines */ }
           }
         }
       }
@@ -130,7 +130,7 @@ export class CloudflareLLMProvider implements LLMProvider {
                 isFinal: false,
                 model: this.model
               };
-            } catch (e) { }
+            } catch { /* ignore non-JSON SSE lines */ }
           }
         }
       }

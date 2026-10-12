@@ -1,6 +1,6 @@
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import '@fastify/multipart';
-import { requirePermissionMiddleware } from '@rag/auth';
+import { requirePermissionMiddleware, canMutateDocument, type Role } from '@rag/auth';
 import { DocumentRepository, JobRepository, FolderRepository } from '@rag/database';
 import { MinioStorageProvider } from '@rag/providers';
 import { ingestionQueue, redisConnection } from '../queue.js';
@@ -44,6 +44,13 @@ const ALLOWED_MIME_TYPES = [
   'image/png',
   'image/webp'
 ];
+
+/** 403 unless the caller may update/delete this document (admins: any; members: only their own uploads). */
+function denyIfNotAllowed(request: FastifyRequest, reply: FastifyReply, verb: 'update' | 'delete', uploadedBy: string | null | undefined) {
+  if (canMutateDocument(request.userRole as Role, verb, uploadedBy, request.user!.id)) return false;
+  reply.status(403).send({ error: { code: 'FORBIDDEN', message: `You can only ${verb} documents you uploaded`, requestId: request.id } });
+  return true;
+}
 
 export const documentRoutes: FastifyPluginAsync = async (fastify) => {
   // Reject malformed ids up front: a non-UUID would otherwise reach Postgres and surface as a 500.
@@ -182,7 +189,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
   // deactivates the previous one, and re-triggers ingestion. The document id
   // (and its conversation citations/history) stays stable across versions.
   fastify.post('/:id/versions', {
-    preHandler: requirePermissionMiddleware('documents:update'),
+    preHandler: requirePermissionMiddleware(['documents:update', 'documents:update:own']),
   }, async (request, reply) => {
     const orgId = request.user?.orgId || request.user?.id;
     if (!orgId) {
@@ -194,6 +201,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
     if (!existingDoc) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
     }
+    if (denyIfNotAllowed(request, reply, 'update', existingDoc.uploadedBy)) return;
 
     const data = await (request as any).file();
     if (!data) {
@@ -282,7 +290,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Move a document
   fastify.patch('/:id/move', {
-    preHandler: requirePermissionMiddleware('documents:update'),
+    preHandler: requirePermissionMiddleware(['documents:update', 'documents:update:own']),
   }, async (request, reply) => {
     const orgId = request.user?.orgId || request.user?.id;
     if (!orgId) {
@@ -291,6 +299,11 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
     const { id } = request.params as { id: string };
     const { folderId } = request.body as { folderId: string | null };
+    const target = await docRepo.findById(orgId, id);
+    if (!target) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
+    }
+    if (denyIfNotAllowed(request, reply, 'update', target.uploadedBy)) return;
     if (folderId != null) {
       // The destination must be a folder in *this* library, never another tenant's.
       const folder = await folderRepo.getById(orgId, folderId).catch(() => null);
@@ -308,7 +321,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update document notes
   fastify.patch('/:id/notes', {
-    preHandler: requirePermissionMiddleware('documents:update'),
+    preHandler: requirePermissionMiddleware(['documents:update', 'documents:update:own']),
   }, async (request, reply) => {
     const orgId = request.user?.orgId || request.user?.id;
     if (!orgId) {
@@ -317,6 +330,11 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
     const { id } = request.params as { id: string };
     const { notes } = request.body as { notes: string | null };
+    const target = await docRepo.findById(orgId, id);
+    if (!target) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
+    }
+    if (denyIfNotAllowed(request, reply, 'update', target.uploadedBy)) return;
 
     const doc = await docRepo.updateNotes(orgId, id, notes);
     if (!doc) {
@@ -328,7 +346,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete a document
   fastify.delete('/:id', {
-    preHandler: requirePermissionMiddleware('documents:delete'),
+    preHandler: requirePermissionMiddleware(['documents:delete', 'documents:delete:own']),
   }, async (request, reply) => {
     const orgId = request.user?.orgId || request.user?.id;
     if (!orgId) {
@@ -339,6 +357,12 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
     if (!id) {
       return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Missing document ID' } });
     }
+
+    const target = await docRepo.findById(orgId, id);
+    if (!target) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
+    }
+    if (denyIfNotAllowed(request, reply, 'delete', target.uploadedBy)) return;
 
     try {
       const deletedDoc = await docRepo.softDelete(orgId, id);
@@ -377,7 +401,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       let stream;
       try {
         stream = await storage.download(version.filePath);
-      } catch (err) {
+      } catch {
         return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'File is missing from storage' } });
       }
 

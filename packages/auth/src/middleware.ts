@@ -142,8 +142,11 @@ export function requireLibraryPermission(action: Action) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Library not found', requestId: request.id } });
     }
     request.userRole = role;
-    if (!hasPermission(role, action)) {
-      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: `Permission denied: requires '${action}' action`, requestId: request.id } });
+    // An array means "any of" — used where a weaker "own" variant is enough to enter the
+    // route and the handler then checks ownership (see canMutateDocument).
+    const actions = Array.isArray(action) ? action : [action];
+    if (!actions.some((a) => hasPermission(role, a))) {
+      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: `Permission denied: requires '${actions[0]}' action`, requestId: request.id } });
     }
   };
 }
@@ -154,7 +157,7 @@ export function requireLibraryPermission(action: Action) {
  * their org on every request — there is no default role. No membership record
  * means no access, full stop.
  */
-export function requirePermissionMiddleware(action: Action) {
+export function requirePermissionMiddleware(action: Action | Action[]) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.user) {
       return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated', requestId: request.id } });
@@ -171,8 +174,11 @@ export function requirePermissionMiddleware(action: Action) {
     }
     request.userRole = role;
 
-    if (!hasPermission(role, action)) {
-      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: `Permission denied: requires '${action}' action`, requestId: request.id } });
+    // An array means "any of" — used where a weaker "own" variant is enough to enter the
+    // route and the handler then checks ownership (see canMutateDocument).
+    const actions = Array.isArray(action) ? action : [action];
+    if (!actions.some((a) => hasPermission(role, a))) {
+      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: `Permission denied: requires '${actions[0]}' action`, requestId: request.id } });
     }
   };
 }
