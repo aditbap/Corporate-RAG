@@ -20,7 +20,7 @@ export interface IngestionJob {
   attempts: number;
   maxAttempts: number;
   errorMessage: string | null;
-  errorDetails: any | null;
+  errorDetails: unknown;
   idempotencyKey: string;
   startedAt: Date | null;
   completedAt: Date | null;
@@ -32,5 +32,5 @@ export interface JobProgress {
   chunks_total?: number;
   chunks_embedded?: number;
   chunks_indexed?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }

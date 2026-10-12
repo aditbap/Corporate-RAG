@@ -9,7 +9,7 @@ export class ChunkRepository extends BaseRepository {
     super('document_chunks');
   }
 
-  async insertChunks(orgId: string, documentId: string, versionId: string, chunks: { text: string, embedding: number[], metadata?: any }[], embeddingModel: string) {
+  async insertChunks(orgId: string, documentId: string, versionId: string, chunks: { text: string, embedding: number[], metadata?: Record<string, unknown> }[], embeddingModel: string) {
     if (chunks.length === 0) return [];
 
     // We insert in batches if needed, but for now we assume chunks array is a manageable size

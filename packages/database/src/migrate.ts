@@ -7,7 +7,9 @@ dotenv.config({ path: '../../.env' });
 
 async function main() {
   console.log('Running raw SQL migration...');
-  const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error('DATABASE_URL is not set');
+  const sql = postgres(databaseUrl, { max: 1 });
 
   const sqlContent = fs.readFileSync(path.join(process.cwd(), '../../packages/database/drizzle', '0000_light_slayback.sql'), 'utf-8');
   await sql.unsafe(sqlContent);

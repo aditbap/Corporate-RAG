@@ -2,8 +2,7 @@ import { getSession } from 'next-auth/react'
 
 /**
  * Fetches the current Keycloak access token for calling apps/api, or null if
- * unauthenticated. Drop-in replacement for the old
- * `(await supabase.auth.getSession()).data.session?.access_token` pattern.
+ * unauthenticated. The token is stored in the Auth.js session (see src/auth.ts).
  */
 export async function getAccessToken(): Promise<string | null> {
   const session = await getSession()

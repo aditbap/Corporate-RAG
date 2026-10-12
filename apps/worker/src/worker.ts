@@ -98,7 +98,7 @@ export const ingestionWorker = new Worker<IngestionJobData>(
       
       // Generate embeddings in batches of 100
       const batchSize = 100;
-      const chunksWithEmbeddings: { text: string; embedding: number[]; metadata?: any }[] = [];
+      const chunksWithEmbeddings: { text: string; embedding: number[]; metadata?: Record<string, unknown> }[] = [];
       
       for (let i = 0; i < chunks_total; i += batchSize) {
          const batch = chunks.slice(i, i + batchSize);

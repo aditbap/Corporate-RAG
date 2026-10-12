@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getAccessToken } from '@/lib/auth-client'
+import { useLibraryAccess } from '@/lib/active-library'
 import { 
   Loader2, FileText, Trash2, File, UploadCloud, Search, 
   ChevronDown, Filter, LayoutGrid, List, MoreHorizontal, 
   Image as ImageIcon, Check, MessageSquare, Download, FolderOutput, Edit2, Minus,
-  FolderPlus, Upload, Folder, ArrowLeft, X, AlertCircle, Eye
+  FolderPlus, Upload, Folder, X, AlertCircle, Eye
 } from 'lucide-react'
 
 interface Document {
@@ -19,6 +20,7 @@ interface Document {
   status: string
   createdAt: string
   notes: string | null
+  uploadedBy?: string | null
   uploaderName?: string | null
   uploaderEmail?: string | null
 }
@@ -32,6 +34,7 @@ interface FolderType {
 
 export default function LibraryPage() {
   const router = useRouter()
+  const access = useLibraryAccess()
   const [documents, setDocuments] = useState<Document[]>([])
   const [folders, setFolders] = useState<FolderType[]>([])
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
@@ -139,6 +142,8 @@ export default function LibraryPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchContent()
     setSelectedDocs(new Set())
+    // fetchContent is recreated every render; the fetch must only re-run when the folder changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentFolderId])
 
   useEffect(() => {
@@ -217,7 +222,7 @@ export default function LibraryPage() {
       const url = URL.createObjectURL(blob);
       const doc = documents.find(d => d.id === id);
       setPreviewDocument({ id, url, fileName, fileType, notes: doc?.notes || null });
-    } catch (e) {
+    } catch {
       showNotification('Failed to open file', 'error');
     }
   }
@@ -245,7 +250,7 @@ export default function LibraryPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (e) {
+    } catch {
       showNotification('Failed to download file', 'error');
     }
   }
@@ -320,7 +325,7 @@ export default function LibraryPage() {
       
       await fetchContent()
       showNotification('Files uploaded successfully', 'success')
-    } catch (error) {
+    } catch {
       showNotification('One or more uploads failed', 'error')
     } finally {
       setIsUploading(false)
@@ -382,6 +387,7 @@ export default function LibraryPage() {
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
+    if (!access.canUpload) return
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 5) {
@@ -408,6 +414,9 @@ export default function LibraryPage() {
       return next
     })
   }
+
+  // Move/Delete are offered in bulk only when every selected document is one the user may change.
+  const selectedMutable = selectedDocs.size > 0 && Array.from(selectedDocs).every((id) => access.canMutateDoc(documents.find((d) => d.id === id)?.uploadedBy))
 
   const filteredDocuments = documents.filter(doc => {
     if (activeTab === 'Images' && !doc.fileType.includes('image')) return false;
@@ -663,7 +672,7 @@ export default function LibraryPage() {
               multiple
             />
             
-            <div className="relative">
+            {access.canUpload && <div className="relative">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -711,7 +720,7 @@ export default function LibraryPage() {
                   </button>
                 </div>
               )}
-            </div>
+            </div>}
           </div>
         </header>
 
@@ -731,7 +740,7 @@ export default function LibraryPage() {
               <button className="flex items-center gap-2 px-4 py-2 border border-zinc-700 bg-zinc-900/50 text-zinc-300 text-sm font-medium rounded-full hover:bg-zinc-800 transition-colors">
                 <Download className="w-4 h-4" /> Download
               </button>
-              <button 
+              {selectedMutable && (<><button 
                 onClick={() => openMoveModal()}
                 className="flex items-center gap-2 px-4 py-2 border border-zinc-700 bg-zinc-900/50 text-zinc-300 text-sm font-medium rounded-full hover:bg-zinc-800 transition-colors"
               >
@@ -742,7 +751,7 @@ export default function LibraryPage() {
                 className="flex items-center gap-2 px-4 py-2 border border-red-500/30 text-red-400 bg-red-950/20 text-sm font-medium rounded-full hover:bg-red-950/40 transition-colors"
               >
                 <Trash2 className="w-4 h-4" /> Delete
-              </button>
+              </button></>)}
             </div>
           ) : (
             <div className="flex items-center gap-1 animate-in fade-in duration-200">
@@ -905,13 +914,13 @@ export default function LibraryPage() {
                             e.stopPropagation(); 
                             setActiveDropdown(activeDropdown === folder.id ? null : folder.id); 
                           }}
-                          className={`p-1.5 hover:text-zinc-200 hover:bg-zinc-700 rounded-md transition-colors ${activeDropdown === folder.id ? 'bg-zinc-700 text-zinc-200 opacity-100' : ''}`}
+                          className={`p-1.5 hover:text-zinc-200 hover:bg-zinc-700 rounded-md transition-colors ${activeDropdown === folder.id ? 'bg-zinc-700 text-zinc-200 opacity-100' : ''} ${access.canManageFolders ? '' : 'hidden'}`}
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                       </div>
 
-                      {activeDropdown === folder.id && (
+                      {access.canManageFolders && activeDropdown === folder.id && (
                         <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2">
                           <button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                             <Edit2 className="w-4 h-4"/> Rename
@@ -992,7 +1001,7 @@ export default function LibraryPage() {
                             <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleDownload(doc.id, doc.fileName); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                               <Download className="w-4 h-4"/> Download
                             </button>
-                            <button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                            {access.canMutateDoc(doc.uploadedBy) && (<><button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                               <Edit2 className="w-4 h-4"/> Rename
                             </button>
                             <button 
@@ -1015,7 +1024,7 @@ export default function LibraryPage() {
                               className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 flex items-center gap-3"
                             >
                               <Trash2 className="w-4 h-4"/> Delete
-                            </button>
+                            </button></>)}
                           </div>
                         )}
                       </div>
@@ -1045,12 +1054,12 @@ export default function LibraryPage() {
                         e.stopPropagation(); 
                         setActiveDropdown(activeDropdown === folder.id ? null : folder.id); 
                       }}
-                      className={`p-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 rounded-md backdrop-blur-sm transition-colors ${activeDropdown === folder.id ? 'bg-zinc-700 opacity-100' : ''}`}
+                      className={`p-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 rounded-md backdrop-blur-sm transition-colors ${access.canManageFolders ? '' : 'hidden'} ${activeDropdown === folder.id ? 'bg-zinc-700 opacity-100' : ''}`}
                     >
                       <MoreHorizontal className="w-[14px] h-[14px]" />
                     </button>
 
-                    {activeDropdown === folder.id && (
+                    {access.canManageFolders && activeDropdown === folder.id && (
                       <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in">
                         <button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                           <Edit2 className="w-4 h-4"/> Rename
@@ -1122,7 +1131,7 @@ export default function LibraryPage() {
                           <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleDownload(doc.id, doc.fileName); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                             <Download className="w-4 h-4"/> Download
                           </button>
-                          <button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                          {access.canMutateDoc(doc.uploadedBy) && (<><button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                             <Edit2 className="w-4 h-4"/> Rename
                           </button>
                           <button 
@@ -1145,7 +1154,7 @@ export default function LibraryPage() {
                             className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 flex items-center gap-3"
                           >
                             <Trash2 className="w-4 h-4"/> Delete
-                          </button>
+                          </button></>)}
                         </div>
                       )}
                     </div>
@@ -1244,7 +1253,11 @@ export default function LibraryPage() {
             {/* File Viewer */}
             <div className="flex-1 relative flex items-center justify-center bg-zinc-950/50">
               {previewDocument.fileType.includes('image') ? (
-                <img src={previewDocument.url} alt={previewDocument.fileName} className="max-w-full max-h-full object-contain p-4" />
+                <>
+                  {/* Blob URL of the viewer's own download; next/image can't optimise blob: URLs. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={previewDocument.url} alt={previewDocument.fileName} className="max-w-full max-h-full object-contain p-4" />
+                </>
               ) : previewDocument.fileType === 'pdf' ? (
                 <iframe src={`${previewDocument.url}#toolbar=0`} className="w-full h-full border-none bg-zinc-900 rounded-bl-xl" />
               ) : (
@@ -1284,7 +1297,7 @@ export default function LibraryPage() {
                       } else {
                         throw new Error('Failed to save');
                       }
-                    } catch (e) {
+                    } catch {
                       showNotification('Failed to save notes', 'error');
                     } finally {
                       setIsUploading(false);

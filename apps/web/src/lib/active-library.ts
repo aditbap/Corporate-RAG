@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { getAccessToken } from '@/lib/auth-client'
 
 const STORAGE_KEY = 'rag.activeLibraryId'
@@ -11,6 +12,14 @@ export function getActiveLibraryId(): string | null {
   } catch {
     return null
   }
+}
+
+/**
+ * Full-page navigation (not client-side routing) — used when the active library changes so every
+ * page, cache and in-flight request restarts under the new library.
+ */
+export function hardNavigate(path: string) {
+  window.location.assign(new URL(path, window.location.origin).href)
 }
 
 /** `null` selects the user's personal workspace (the API's default). */
@@ -97,4 +106,55 @@ export interface Invite {
   expiresAt: string | null
   maxUses: number | null
   useCount: number
+}
+
+export interface LibraryAccess {
+  /** False until the library list has loaded; controls stay hidden (fail closed) until then. */
+  loaded: boolean
+  role: Library['role'] | null
+  userId: string | null
+  canUpload: boolean
+  canManageFolders: boolean
+  /** Admins/owners can change any document; members only the ones they uploaded. */
+  canMutateDoc: (uploadedBy?: string | null) => boolean
+}
+
+let accessPromise: Promise<{ libraries: Library[]; userId: string }> | null = null
+
+/**
+ * The caller's role in the active library, for hiding actions they can't perform.
+ * This is only UX — apps/api enforces the same rules (see packages/auth/src/rbac.ts) and
+ * returns 403 regardless of what the UI shows.
+ */
+export function useLibraryAccess(): LibraryAccess {
+  const [state, setState] = useState<{ role: Library['role']; userId: string } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    accessPromise ??= libraryApi<{ data: Library[]; currentUserId: string }>('').then((r) => ({ libraries: r.data, userId: r.currentUserId }))
+    accessPromise
+      .then(({ libraries, userId }) => {
+        if (cancelled) return
+        const activeId = getActiveLibraryId()
+        const active = libraries.find((l) => l.id === activeId) ?? libraries.find((l) => l.kind === 'personal')
+        setState({ role: active?.role ?? 'owner', userId })
+      })
+      .catch(() => {
+        accessPromise = null // retry on the next mount
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const role = state?.role ?? null
+  const isAdmin = role === 'owner' || role === 'admin'
+  return {
+    loaded: state !== null,
+    role,
+    userId: state?.userId ?? null,
+    canUpload: role !== null && role !== 'viewer',
+    canManageFolders: isAdmin,
+    canMutateDoc: (uploadedBy) => isAdmin || (role === 'member' && !!uploadedBy && uploadedBy === state?.userId),
+  }
 }

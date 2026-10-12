@@ -12,7 +12,7 @@ export default async function (fastify: FastifyInstance) {
       return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
     }
 
-    const { parentId } = request.query as any;
+    const { parentId } = request.query as { parentId?: string };
     const parsedParentId = parentId === 'null' ? null : (parentId || undefined);
 
     const schema = z.object({
@@ -27,7 +27,7 @@ export default async function (fastify: FastifyInstance) {
     try {
       const folders = await folderRepo.list(tenantId, parsedParentId);
       return { data: folders };
-    } catch (error: any) {
+    } catch (error) {
       request.log.error(error);
       return reply.status(500).send({ error: { code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch folders' } });
     }
@@ -39,7 +39,7 @@ export default async function (fastify: FastifyInstance) {
       return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
     }
 
-    const { name, parentId } = request.body as any;
+    const { name, parentId } = request.body as { name?: string; parentId?: string };
     const parsedParentId = parentId === 'null' ? null : (parentId || undefined);
 
     const schema = z.object({
@@ -55,7 +55,7 @@ export default async function (fastify: FastifyInstance) {
     try {
       const folder = await folderRepo.create(tenantId, body.data);
       return reply.status(201).send({ data: folder });
-    } catch (error: any) {
+    } catch (error) {
       request.log.error(error);
       return reply.status(500).send({ error: { code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create folder' } });
     }
@@ -79,8 +79,8 @@ export default async function (fastify: FastifyInstance) {
     try {
       await folderRepo.delete(tenantId, params.data.id);
       return reply.status(204).send();
-    } catch (error: any) {
-      if (error.message === 'FOLDER_NOT_EMPTY') {
+    } catch (error) {
+      if (error instanceof Error && error.message === 'FOLDER_NOT_EMPTY') {
         return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Folder is not empty. Cannot delete.' } });
       }
       request.log.error(error);
@@ -112,7 +112,7 @@ export default async function (fastify: FastifyInstance) {
     try {
       const folder = await folderRepo.rename(tenantId, params.data.id, body.data.name);
       return reply.status(200).send({ data: folder });
-    } catch (error: any) {
+    } catch (error) {
       request.log.error(error);
       return reply.status(500).send({ error: { code: 'INTERNAL_SERVER_ERROR', message: 'Failed to rename folder' } });
     }

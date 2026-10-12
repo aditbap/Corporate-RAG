@@ -4,7 +4,7 @@ export interface ScoredChunk {
   documentId: string;
   score?: number;
   fusionScore?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface RerankerProvider {

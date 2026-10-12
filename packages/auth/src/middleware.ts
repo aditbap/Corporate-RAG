@@ -16,6 +16,16 @@ declare module 'fastify' {
 
 const membershipRepo = new MembershipRepository();
 
+/**
+ * The authenticated user for a request. `authenticate` (an onRequest hook on every /api/v1
+ * route) always sets `request.user` or rejects the request, so reaching a handler without it is
+ * a wiring bug — fail loudly instead of sprinkling `!` assertions.
+ */
+export function requireUser(request: FastifyRequest): NonNullable<FastifyRequest['user']> {
+  if (!request.user) throw new Error('requireUser called on an unauthenticated request');
+  return request.user;
+}
+
 // Per-process cache so we don't re-run the provisioning upserts on every request
 // for the same user/org. Not shared across API instances — acceptable for a
 // single-instance dev/small-prod deployment; a multi-instance deployment would

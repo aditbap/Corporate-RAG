@@ -4,7 +4,7 @@ export interface Conversation {
   userId: string;
   title: string | null;
   isArchived: boolean;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,7 +21,7 @@ export interface Message {
   model: string | null;
   latencyMs: number | null;
   costUsd: number | null;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: Date;
 }
 

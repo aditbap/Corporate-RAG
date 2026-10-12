@@ -6,7 +6,7 @@ export interface ChatMessage {
 export interface StreamChunk {
   type: 'content' | 'sources' | 'usage' | 'done' | 'error';
   delta?: string;
-  sources?: any[];
+  sources?: unknown[];
   usage?: { prompt_tokens: number; completion_tokens: number };
   message_id?: string;
   error?: string;

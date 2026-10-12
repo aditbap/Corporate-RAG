@@ -155,7 +155,8 @@ export class DocumentRepository extends BaseRepository {
         isActive: true,
       }).returning();
 
-      return version!;
+      if (!version) throw new Error('Failed to create document version');
+      return version;
     });
   }
 

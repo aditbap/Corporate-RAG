@@ -16,10 +16,10 @@ export class JobRepository extends BaseRepository {
     return result;
   }
 
-  async updateStatus(tenantId: string, id: string, status: typeof ingestionJobs.$inferSelect['status'], currentStage?: string, progress?: any) {
+  async updateStatus(tenantId: string, id: string, status: typeof ingestionJobs.$inferSelect['status'], currentStage?: string, progress?: Record<string, unknown>) {
     this.requireTenant(tenantId);
     
-    const updateData: any = { 
+    const updateData: Partial<typeof ingestionJobs.$inferInsert> = { 
       status, 
       updatedAt: new Date() 
     };

@@ -31,7 +31,7 @@ export interface DocumentVersion {
   chunkCount: number;
   isActive: boolean;
   isIndexed: boolean;
-  parsedContent: any | null;
+  parsedContent: unknown;
   createdAt: Date;
 }
 
@@ -60,5 +60,5 @@ export interface ChunkMetadata {
   heading_hierarchy?: string[];
   is_table?: boolean;
   is_code?: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 }

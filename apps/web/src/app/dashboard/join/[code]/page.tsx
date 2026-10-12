@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from 'react'
 import { Loader2, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { libraryApi, setActiveLibraryId } from '@/lib/active-library'
+import { libraryApi, setActiveLibraryId, hardNavigate } from '@/lib/active-library'
 
 interface Preview { libraryId: string; name: string; description: string | null; role: string; usable: boolean }
 
@@ -24,7 +24,7 @@ export default function JoinLibraryPage({ params }: { params: Promise<{ code: st
     try {
       const res = await libraryApi<{ data: { libraryId: string } }>('/join', { method: 'POST', body: JSON.stringify({ code }) })
       setActiveLibraryId(res.data.libraryId)
-      window.location.assign('/dashboard/library')
+      hardNavigate('/dashboard/library')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not join')
       setJoining(false)

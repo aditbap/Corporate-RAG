@@ -4,7 +4,6 @@ import { ChatArea } from '@/components/ChatArea'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { getAccessToken } from '@/lib/auth-client'
-import { Loader2 } from 'lucide-react'
 import { ChatAreaSkeleton } from '@/components/ChatAreaSkeleton'
 import type { ChatMessage } from '@/types/chat'
 

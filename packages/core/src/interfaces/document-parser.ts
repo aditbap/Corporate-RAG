@@ -1,7 +1,7 @@
 export interface ParsedDocument {
   text: string;
   pages: Array<{ number: number; text: string }>;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface DocumentParser {

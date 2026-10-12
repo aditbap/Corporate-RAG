@@ -15,6 +15,8 @@ const KC_ADMIN = process.env.KEYCLOAK_ADMIN_USER ?? 'admin';
 const KC_ADMIN_PASSWORD = process.env.KEYCLOAK_ADMIN_PASSWORD ?? 'admin';
 const CLIENT_ID = 'rag-e2e-test';
 const PASSWORD = `Pw-${crypto.randomBytes(8).toString('hex')}`;
+/** Password of every user created by createUser (for tests that drive the real login form). */
+export const testPassword = PASSWORD;
 
 const isLocal = (u: string) => /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(u);
 if (!isLocal(KEYCLOAK_URL) || !isLocal(API)) {
@@ -116,8 +118,9 @@ export async function api<T = any>(user: TestUser | null, method: string, path: 
   return { status: r.status, body, headers: r.headers, text };
 }
 
-export async function upload(user: TestUser, org: string | undefined, name: string, mime: string, content: string): Promise<Res> {
+export async function upload(user: TestUser, org: string | undefined, name: string, mime: string, content: string, fields: Record<string, string> = {}): Promise<Res> {
   const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
   form.append('file', new Blob([content], { type: mime }), name);
   const headers: Record<string, string> = { Authorization: `Bearer ${user.token}` };
   if (org) headers['X-Org-Id'] = org;

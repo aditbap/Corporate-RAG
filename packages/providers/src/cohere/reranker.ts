@@ -28,10 +28,10 @@ export class CohereRerankerProvider implements RerankerProvider {
         topN,
       });
 
-      return response.results.map((result) => ({
-        ...candidates[result.index]!,
-        score: result.relevanceScore,
-      }));
+      return response.results.flatMap((result) => {
+        const candidate = candidates[result.index];
+        return candidate ? [{ ...candidate, score: result.relevanceScore }] : [];
+      });
     } catch (error) {
       console.error('Error reranking documents with Cohere:', error);
       throw error;

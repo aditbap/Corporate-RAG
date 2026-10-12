@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronsUpDown, Check, Plus, Users, UserPlus, Loader2, User } from 'lucide-react'
 import {
-  getActiveLibraryId, setActiveLibraryId, libraryApi, type Library,
+  getActiveLibraryId, setActiveLibraryId, libraryApi, hardNavigate, type Library,
 } from '@/lib/active-library'
 import { LibraryMembersModal } from '@/components/LibraryMembersModal'
 
@@ -22,7 +22,7 @@ export function LibrarySwitcher() {
   const switchTo = (id: string | null) => {
     setActiveLibraryId(id)
     // Full reload so every page re-fetches under the new library.
-    window.location.assign('/dashboard/library')
+    hardNavigate('/dashboard/library')
   }
 
   useEffect(() => {
