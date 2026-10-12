@@ -57,6 +57,7 @@ export default function LibraryPage() {
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false)
+  const [uploaderFilter, setUploaderFilter] = useState<string | null>(null)
   const [renameTarget, setRenameTarget] = useState<{ id: string; isFolder: boolean } | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [createFolderName, setCreateFolderName] = useState('')
@@ -260,6 +261,17 @@ export default function LibraryPage() {
     }
   }
 
+  // One download per selected document, spaced out so the browser doesn't drop them.
+  const handleBulkDownload = async () => {
+    const chosen = documents.filter((d) => selectedDocs.has(d.id))
+    if (chosen.length === 0) return
+    if (chosen.length > 1) showNotification(`Downloading ${chosen.length} files…`, 'success')
+    for (const doc of chosen) {
+      await handleDownload(doc.id, doc.fileName)
+      await new Promise((r) => setTimeout(r, 300))
+    }
+  }
+
   const handleDownload = async (id: string, fileName: string) => {
     try {
       const accessToken = await getAccessToken()
@@ -451,7 +463,17 @@ export default function LibraryPage() {
   // Move/Delete are offered in bulk only when every selected document is one the user may change.
   const selectedMutable = selectedDocs.size > 0 && Array.from(selectedDocs).every((id) => access.canMutateDoc(documents.find((d) => d.id === id)?.uploadedBy))
 
+  // Distinct uploaders in the current view, for the "Uploaded by" filter (shared libraries).
+  const uploaders = Array.from(
+    new Map(
+      documents
+        .filter((d) => d.uploadedBy)
+        .map((d) => [d.uploadedBy as string, d.uploaderName || d.uploaderEmail || 'Unknown'] as const),
+    ),
+  ).map(([id, label]) => ({ id, label }))
+
   const filteredDocuments = documents.filter(doc => {
+    if (uploaderFilter && doc.uploadedBy !== uploaderFilter) return false;
     if (activeTab === 'Images' && !doc.fileType.includes('image')) return false;
     if (activeTab === 'Documents' && doc.fileType.includes('image')) return false;
     if (searchQuery && !doc.fileName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -806,7 +828,10 @@ export default function LibraryPage() {
               >
                 <MessageSquare className="w-4 h-4" /> Start chat
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 border border-zinc-700 bg-zinc-900/50 text-zinc-300 text-sm font-medium rounded-full hover:bg-zinc-800 transition-colors">
+              <button
+                onClick={handleBulkDownload}
+                className="flex items-center gap-2 px-4 py-2 border border-zinc-700 bg-zinc-900/50 text-zinc-300 text-sm font-medium rounded-full hover:bg-zinc-800 transition-colors"
+              >
                 <Download className="w-4 h-4" /> Download
               </button>
               {selectedMutable && (<><button 
@@ -840,9 +865,33 @@ export default function LibraryPage() {
             {selectedDocs.size > 0 ? (
               <span className="font-medium">{selectedDocs.size} selected</span>
             ) : (
-              <button className="p-2 hover:text-zinc-200 transition-colors rounded-full hover:bg-zinc-800/50">
-                <Filter className="w-[18px] h-[18px]" />
-              </button>
+              uploaders.length > 1 && (
+                <div className="relative">
+                  <button
+                    aria-label="Filter by uploader"
+                    onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'filter' ? null : 'filter') }}
+                    className={`relative p-2 transition-colors rounded-full hover:bg-zinc-800/50 ${uploaderFilter ? 'text-blue-400' : 'hover:text-zinc-200'}`}
+                  >
+                    <Filter className="w-[18px] h-[18px]" />
+                    {uploaderFilter && <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-blue-400" />}
+                  </button>
+                  {activeDropdown === 'filter' && (
+                    <div className="absolute right-0 top-full mt-1 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Uploaded by</div>
+                      {[{ id: null as string | null, label: 'Everyone' }, ...uploaders].map((u) => (
+                        <button
+                          key={u.id ?? 'all'}
+                          onClick={() => { setUploaderFilter(u.id); setActiveDropdown(null) }}
+                          className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3"
+                        >
+                          <Check className={`w-4 h-4 ${uploaderFilter === u.id ? 'opacity-100' : 'opacity-0'}`} />
+                          <span className="truncate">{u.label}{u.id === access.userId ? ' (you)' : ''}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
             )}
             
             <div className="w-px h-4 bg-zinc-700" />
@@ -1061,7 +1110,7 @@ export default function LibraryPage() {
 
                         {activeDropdown === doc.id && (
                           <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                            <button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); router.push(`/dashboard/chat/new?docIds=${encodeURIComponent(doc.id)}`); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                               <MessageSquare className="w-4 h-4"/> Chat about this
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleView(doc.id, doc.fileName, doc.fileType); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
@@ -1191,7 +1240,7 @@ export default function LibraryPage() {
 
                       {activeDropdown === doc.id && (
                         <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in">
-                          <button className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                          <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); router.push(`/dashboard/chat/new?docIds=${encodeURIComponent(doc.id)}`); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                             <MessageSquare className="w-4 h-4"/> Chat about this
                           </button>
                           <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleView(doc.id, doc.fileName, doc.fileType); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">

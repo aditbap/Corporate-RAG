@@ -11,6 +11,8 @@ import TextareaAutosize from 'react-textarea-autosize'
 import { cn } from '@/lib/utils'
 import type { ChatMessage, Citation } from '@/types/chat'
 import { useLibraryAccess } from '@/lib/active-library'
+import { loadChatScope, saveChatScope } from '@/lib/chat-scope'
+import { createSpeechSession, isSpeechSupported, type SpeechSession } from '@/lib/speech'
 
 type Message = ChatMessage
 
@@ -32,20 +34,18 @@ export function ChatArea({
   const [documentIds, setDocumentIds] = useState<string[]>([])
   
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      const docIds = params.get('docIds')
-      if (docIds) {
-        const parsedIds = docIds.split(',').filter(id => id.trim() !== '')
-        if (parsedIds.length > 0) {
-          // One-time hydration from sessionStorage on mount.
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setDocumentIds(parsedIds)
-        }
-      }
+    // One-time hydration of the document scope on mount: from the URL (new chat opened via
+    // "Chat about this" / "Start chat"), else from what was saved for this conversation.
+    const docIds = new URLSearchParams(window.location.search).get('docIds')
+    const ids = docIds
+      ? docIds.split(',').map((id) => id.trim()).filter(Boolean)
+      : initialConversationId ? loadChatScope(initialConversationId) : []
+    if (ids.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDocumentIds(ids)
     }
-  }, [])
-  
+  }, [initialConversationId])
+
   const [previewDocument, setPreviewDocument] = useState<{
     id: string;
     url: string;
@@ -53,12 +53,44 @@ export function ChatArea({
     fileType: string;
   } | null>(null)
 
+  const toggleListening = () => {
+    if (isListening) {
+      speechRef.current?.stop()
+      return
+    }
+    const session = createSpeechSession({
+      onFinalText: (text) => setInput((prev) => (prev && !prev.endsWith(' ') ? `${prev} ${text}` : `${prev}${text}`)),
+      onError: (code) => {
+        if (code === 'not-allowed' || code === 'service-not-allowed') showNotification('Microphone access was blocked. Allow it in your browser to dictate.')
+        else if (code !== 'no-speech' && code !== 'aborted') showNotification('Voice input failed. Please try again.')
+      },
+      onEnd: () => {
+        setIsListening(false)
+        speechRef.current = null
+      },
+    })
+    if (!session) return
+    speechRef.current = session
+    setIsListening(true)
+    session.start()
+  }
+
   const showNotification = (message: string, type: 'error' | 'success' = 'error') => {
     setNotification({ message, type })
     setTimeout(() => setNotification(null), 5000)
   }
 
   const access = useLibraryAccess()
+  const [speechSupported, setSpeechSupported] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const speechRef = useRef<SpeechSession | null>(null)
+
+  useEffect(() => {
+    // Feature-detect after mount so server and client render the same markup.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSpeechSupported(isSpeechSupported())
+    return () => speechRef.current?.stop()
+  }, [])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -218,6 +250,7 @@ export function ChatArea({
     } finally {
       setIsLoading(false)
       if (!initialConversationId && newConversationId) {
+        if (documentIds.length > 0) saveChatScope(newConversationId, documentIds)
         router.replace(`/dashboard/chat/${newConversationId}`)
       }
     }
@@ -494,12 +527,20 @@ export function ChatArea({
                 />
 
                 <div className="flex items-center gap-1.5 shrink-0 mb-[1px]">
-                  <button
-                    type="button"
-                    className="flex size-9 items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/50 transition-colors"
-                  >
-                    <Mic className="size-5" />
-                  </button>
+                  {speechSupported && (
+                    <button
+                      type="button"
+                      onClick={toggleListening}
+                      aria-label={isListening ? 'Stop voice input' : 'Start voice input'}
+                      aria-pressed={isListening}
+                      className={cn(
+                        'flex size-9 items-center justify-center rounded-full transition-colors',
+                        isListening ? 'bg-red-500/20 text-red-400 animate-pulse' : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/50',
+                      )}
+                    >
+                      <Mic className="size-5" />
+                    </button>
+                  )}
 
                   <button
                     onClick={(e) => handleSend(e as unknown as React.FormEvent)}
