@@ -80,3 +80,5 @@ uploads/
 # Local env backups (contain real credentials)
 .env*.bak*
 *.bak-pre-local
+apps/api/api_log.txt
+apps/api/api_pid.txt

@@ -1,3 +1,0 @@
-{"level":30,"time":1787209669401,"pid":14705,"hostname":"Benediktuss-MacBook-Air.local","msg":"Server listening at http://0.0.0.0:3005"}
-Server listening at http://0.0.0.0:3005
-Environment: development
