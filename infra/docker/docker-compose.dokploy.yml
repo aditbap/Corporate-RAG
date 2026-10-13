@@ -210,6 +210,19 @@ services:
     depends_on:
       - api
 
+  # Cloudflare Tunnel "rag-platform": hostnames (rag / api-rag / auth-rag) are routed to web:3000,
+  # api:3002 and keycloak:8080 by the tunnel's remote config, so no Dokploy domains are needed.
+  cloudflared:
+    image: cloudflare/cloudflared:2025.9.1
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    depends_on:
+      - web
+      - api
+      - keycloak
+
   prometheus:
     image: prom/prometheus:v2.55.1
     restart: unless-stopped
