@@ -1,0 +1,40 @@
+# syntax=docker/dockerfile:1
+#
+# Image for apps/api and apps/worker (selected with --build-arg APP=api|worker).
+# Build from the repository root:
+#   docker build -f infra/docker/Dockerfile.node --build-arg APP=api -t rag-api .
+#
+# Stages: install + build the workspace, `pnpm deploy` just this app's production dependencies
+# (workspace packages included, devDependencies and the rest of the monorepo excluded), then copy
+# that into a slim non-root runtime image.
+
+ARG NODE_VERSION=22
+FROM node:${NODE_VERSION}-slim AS base
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+RUN corepack enable
+WORKDIR /repo
+
+FROM base AS build
+ARG APP
+# Manifests first so the dependency layer is cached until a package.json or the lockfile changes.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/worker/package.json apps/worker/
+COPY apps/web/package.json apps/web/
+COPY packages/core/package.json packages/core/
+COPY packages/database/package.json packages/database/
+COPY packages/providers/package.json packages/providers/
+COPY packages/auth/package.json packages/auth/
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter "@rag/${APP}..."
+COPY apps/${APP} apps/${APP}
+COPY packages packages
+RUN pnpm --filter "@rag/${APP}..." run build
+RUN pnpm --filter "@rag/${APP}" deploy --prod --legacy /out
+
+FROM node:${NODE_VERSION}-slim AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build --chown=node:node /out /app
+USER node
+CMD ["node", "dist/index.js"]
