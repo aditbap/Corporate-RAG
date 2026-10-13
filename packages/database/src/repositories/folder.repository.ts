@@ -1,6 +1,6 @@
 import { eq, and, isNull } from 'drizzle-orm';
-import { db } from '../client';
-import { folders, documents } from '../schema';
+import { db } from '../client.js';
+import { folders, documents } from '../schema/index.js';
 
 export class FolderRepository {
   private get db() { return db; }

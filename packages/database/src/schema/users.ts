@@ -1,5 +1,5 @@
 import { pgTable, uuid, varchar, text, boolean, integer, timestamp, pgEnum, uniqueIndex, index } from 'drizzle-orm/pg-core';
-import { organizations } from './organizations';
+import { organizations } from './organizations.js';
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey(), // Matches the Keycloak JWT `sub` claim

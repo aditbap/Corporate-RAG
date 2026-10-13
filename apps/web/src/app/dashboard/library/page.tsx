@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getAccessToken } from '@/lib/auth-client'
-import { useLibraryAccess } from '@/lib/active-library'
+import { useLibraryAccess, readApiError } from '@/lib/active-library'
 import { 
   Loader2, FileText, Trash2, File, UploadCloud, Search, 
   ChevronDown, Filter, LayoutGrid, List, MoreHorizontal, 
@@ -359,19 +359,25 @@ export default function LibraryPage() {
           formData.append('folderId', currentFolderId)
         }
         
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/upload`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/upload`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${accessToken}`
           },
           body: formData
         })
+        if (!res.ok) {
+          // Quota, rate limit, permission or file-type errors: tell the user why, and stop —
+          // the same error would repeat for the remaining files.
+          await fetchContent()
+          throw new Error(await readApiError(res, `Upload of ${file.name} failed`))
+        }
       }
       
       await fetchContent()
       showNotification('Files uploaded successfully', 'success')
-    } catch {
-      showNotification('One or more uploads failed', 'error')
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : 'One or more uploads failed', 'error')
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''

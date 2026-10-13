@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS "folders" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "document_chunks" ADD COLUMN "embedding" "vector(768)";--> statement-breakpoint
+ALTER TABLE "document_chunks" ADD COLUMN "embedding" vector(768);--> statement-breakpoint
 ALTER TABLE "documents" ADD COLUMN "folder_id" uuid;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "documents" ADD CONSTRAINT "documents_folder_id_folders_id_fk" FOREIGN KEY ("folder_id") REFERENCES "folders"("id") ON DELETE set null ON UPDATE no action;

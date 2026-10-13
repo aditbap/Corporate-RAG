@@ -1,7 +1,7 @@
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import '@fastify/multipart';
 import { requirePermissionMiddleware, requireUser, canMutateDocument, type Role } from '@rag/auth';
-import { DocumentRepository, JobRepository, FolderRepository } from '@rag/database';
+import { DocumentRepository, JobRepository, FolderRepository, LibraryRepository } from '@rag/database';
 import { MinioStorageProvider } from '@rag/providers';
 import { ingestionQueue, redisConnection } from '../queue.js';
 import { consumeRateLimit } from '../lib/rate-limit.js';
@@ -28,7 +28,40 @@ const docRepo = new DocumentRepository();
 const jobRepo = new JobRepository();
 const storage = MinioStorageProvider.fromEnv();
 const folderRepo = new FolderRepository();
+const libraryRepo = new LibraryRepository();
+
+/**
+ * Enforces the library's document-count and storage quotas. `incomingBytes` is a hint (the request's
+ * Content-Length) used to refuse an obviously-too-big upload before streaming it; the authoritative
+ * check after the upload uses the stored object's real size (see `storageOverQuota`).
+ */
+async function quotaExceeded(request: FastifyRequest, reply: FastifyReply, orgId: string, opts: { newDocument: boolean }): Promise<boolean> {
+  const [org, usage] = await Promise.all([libraryRepo.get(orgId), docRepo.usage(orgId)]);
+  if (!org) return false;
+  const incoming = Number(request.headers['content-length']) || 0;
+  if (opts.newDocument && usage.documentCount >= org.maxDocuments) {
+    reply.status(403).send({ error: { code: 'QUOTA_EXCEEDED', message: `This library has reached its limit of ${org.maxDocuments} documents.`, requestId: request.id } });
+    return true;
+  }
+  if (usage.storageBytes + incoming > org.maxStorageMb * 1024 * 1024) {
+    reply.status(403).send({ error: { code: 'QUOTA_EXCEEDED', message: `This library has reached its ${org.maxStorageMb} MB storage limit.`, requestId: request.id } });
+    return true;
+  }
+  return false;
+}
+
+/** After an upload landed: true (and the caller removes the object) if it pushed the library over its storage quota. */
+async function storageOverQuota(orgId: string, justUploadedBytes: number): Promise<boolean> {
+  const [org, usage] = await Promise.all([libraryRepo.get(orgId), docRepo.usage(orgId)]);
+  // `usage` doesn't include the new object yet (its version row is created afterwards).
+  return !!org && usage.storageBytes + justUploadedBytes > org.maxStorageMb * 1024 * 1024;
+}
 const UPLOAD_RATE_LIMIT_PER_MINUTE = parseInt(process.env.RATE_LIMIT_UPLOAD_PER_MINUTE || '30', 10);
+
+/** Object keys keep the original name for humans, but only safe characters (no path tricks). */
+function safeObjectName(name: string): string {
+  return name.replace(/[^\w.\- ]+/g, '_').slice(0, 200) || 'file';
+}
 
 /** Per user, per library: each upload starts a (paid) embedding job, so cap the rate. */
 async function uploadRateLimited(request: FastifyRequest, reply: FastifyReply, orgId: string): Promise<boolean> {
@@ -102,6 +135,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
     // requirePermissionMiddleware runs — see ensurePersonalWorkspace there.
 
     if (await uploadRateLimited(request, reply, orgId)) return;
+    if (await quotaExceeded(request, reply, orgId, { newDocument: true })) return;
 
     const data = await request.file();
     if (!data) {
@@ -112,7 +146,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: `Unsupported file type: ${data.mimetype}` } });
     }
 
-    const objectKey = `${orgId}/${crypto.randomUUID()}-${data.filename}`;
+    const objectKey = `${orgId}/${crypto.randomUUID()}-${safeObjectName(data.filename)}`;
 
     // Hash the file as it streams through to MinIO
     const hash = crypto.createHash('sha256');
@@ -129,6 +163,10 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
     const fileHash = hash.digest('hex');
     const fileSizeBytes = objectInfo.sizeBytes;
+    if (await storageOverQuota(orgId, fileSizeBytes)) {
+      await storage.delete(objectKey).catch(() => undefined);
+      return reply.status(403).send({ error: { code: 'QUOTA_EXCEEDED', message: 'This upload would exceed the library\'s storage limit.', requestId: request.id } });
+    }
 
     const fileType = data.mimetype.includes('pdf') ? 'pdf' :
                      data.mimetype.includes('word') ? 'docx' :
@@ -230,6 +268,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
     }
     if (denyIfNotAllowed(request, reply, 'update', existingDoc.uploadedBy)) return;
     if (await uploadRateLimited(request, reply, orgId)) return;
+    if (await quotaExceeded(request, reply, orgId, { newDocument: false })) return;
 
     const data = await request.file();
     if (!data) {
@@ -240,7 +279,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: `Unsupported file type: ${data.mimetype}` } });
     }
 
-    const objectKey = `${orgId}/${crypto.randomUUID()}-${data.filename}`;
+    const objectKey = `${orgId}/${crypto.randomUUID()}-${safeObjectName(data.filename)}`;
 
     const hash = crypto.createHash('sha256');
     const hashed = data.file.pipe(hashingStream(hash));
@@ -256,6 +295,10 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
     const fileHash = hash.digest('hex');
     const fileSizeBytes = objectInfo.sizeBytes;
+    if (await storageOverQuota(orgId, fileSizeBytes)) {
+      await storage.delete(objectKey).catch(() => undefined);
+      return reply.status(403).send({ error: { code: 'QUOTA_EXCEEDED', message: 'This upload would exceed the library\'s storage limit.', requestId: request.id } });
+    }
 
     const version = await docRepo.createNewVersion(orgId, id, {
       filePath: objectKey,
@@ -446,6 +489,12 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
     const doc = await docRepo.findById(orgId, id);
     if (!doc) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
+    }
+
+    // A file is only shared once ingestion (which includes the antivirus scan) has accepted it.
+    // Until then — or if it was rejected — only its uploader and admins/owners may fetch it.
+    if (doc.status !== 'ready' && !canMutateDocument(request.userRole as Role, 'update', doc.uploadedBy, requireUser(request).id)) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
     }
 

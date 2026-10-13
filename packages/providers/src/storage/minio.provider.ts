@@ -71,6 +71,25 @@ export class MinioStorageProvider implements StorageProvider {
     await this.client.removeObject(this.bucket, key);
   }
 
+  async deleteByPrefix(prefix: string): Promise<number> {
+    const keys: string[] = [];
+    await new Promise<void>((resolve, reject) => {
+      const stream = this.client.listObjectsV2(this.bucket, prefix, true);
+      stream.on('data', (obj) => { if (obj.name) keys.push(obj.name); });
+      stream.on('error', reject);
+      stream.on('end', () => resolve());
+    });
+    // removeObjects takes batches of up to 1000 keys.
+    for (let i = 0; i < keys.length; i += 1000) {
+      await this.client.removeObjects(this.bucket, keys.slice(i, i + 1000));
+    }
+    return keys.length;
+  }
+
+  async ping(): Promise<void> {
+    if (!(await this.client.bucketExists(this.bucket))) throw new Error(`Bucket "${this.bucket}" does not exist`);
+  }
+
   async getSignedUrl(key: string, expiresInSeconds = 3600): Promise<string> {
     return this.client.presignedGetObject(this.bucket, key, expiresInSeconds);
   }

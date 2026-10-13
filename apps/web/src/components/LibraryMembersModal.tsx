@@ -14,6 +14,19 @@ const ROLE_HINT: Record<Library['role'], string> = {
   viewer: 'Read and chat only',
 }
 
+function QuotaLine({ library }: { library: Library }) {
+  const storageMb = library.storageBytes / (1024 * 1024)
+  const docsRatio = library.documentCount / library.maxDocuments
+  const storageRatio = storageMb / library.maxStorageMb
+  const tone = (r: number) => (r >= 1 ? 'text-red-400' : r >= 0.9 ? 'text-amber-400' : 'text-zinc-500')
+  return (
+    <p className="text-xs mt-1.5 flex flex-wrap gap-x-4">
+      <span className={tone(docsRatio)}>{library.documentCount} / {library.maxDocuments} documents</span>
+      <span className={tone(storageRatio)}>{storageMb.toFixed(1)} / {library.maxStorageMb} MB</span>
+    </p>
+  )
+}
+
 export function LibraryMembersModal({
   library,
   onClose,
@@ -87,6 +100,7 @@ export function LibraryMembersModal({
           <div>
             <h2 className="text-lg font-semibold text-zinc-100">{library.name}</h2>
             <p className="text-sm text-zinc-500">Members &amp; invites · you are {library.role}</p>
+            <QuotaLine library={library} />
           </div>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 p-1" aria-label="Close"><X className="w-5 h-5" /></button>
         </div>

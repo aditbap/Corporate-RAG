@@ -1,5 +1,5 @@
 import { pgTable, uuid, varchar, timestamp, AnyPgColumn } from 'drizzle-orm/pg-core';
-import { organizations } from './organizations';
+import { organizations } from './organizations.js';
 
 export const folders = pgTable('folders', {
   id: uuid('id').defaultRandom().primaryKey(),

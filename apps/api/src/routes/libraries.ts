@@ -1,6 +1,8 @@
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { requireLibraryPermission, requireUser } from '@rag/auth';
 import { LibraryRepository } from '@rag/database';
+import { redisConnection } from '../queue.js';
+import { consumeRateLimit } from '../lib/rate-limit.js';
 
 type Role = 'owner' | 'admin' | 'member' | 'viewer';
 const ROLE_RANK: Record<Role, number> = { viewer: 0, member: 1, admin: 2, owner: 3 };
@@ -38,7 +40,18 @@ export const libraryRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // ---- Joining by invite code (no library membership needed yet) ----
+  // Invite codes carry 192 random bits so they can't be guessed, but cap attempts anyway so the
+  // lookup endpoints can't be used as a free probe/flood target.
+  const JOIN_ATTEMPTS_PER_MINUTE = parseInt(process.env.RATE_LIMIT_JOIN_PER_MINUTE || '20', 10);
+  const joinLimited = async (request: FastifyRequest, reply: FastifyReply) => {
+    const limit = await consumeRateLimit(redisConnection, `rate-limit:join:${requireUser(request).id}`, JOIN_ATTEMPTS_PER_MINUTE, 60);
+    if (limit.allowed) return false;
+    fail(reply, request, 429, 'TOO_MANY_REQUESTS', 'Too many invite attempts. Please try again in a minute.');
+    return true;
+  };
+
   fastify.get('/join/:code', async (request, reply) => {
+    if (await joinLimited(request, reply)) return;
     const { code } = request.params as { code: string };
     const inv = await libraryRepo.previewInvite(code);
     if (!inv || !inv.orgActive) return fail(reply, request, 404, 'INVITE_INVALID', 'Invite not found');
@@ -48,6 +61,7 @@ export const libraryRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/join', async (request, reply) => {
+    if (await joinLimited(request, reply)) return;
     const { code } = (request.body ?? {}) as { code?: string };
     if (!code || typeof code !== 'string') return fail(reply, request, 400, 'BAD_REQUEST', 'code is required');
     const result = await libraryRepo.joinWithInvite(requireUser(request).id, code.trim());

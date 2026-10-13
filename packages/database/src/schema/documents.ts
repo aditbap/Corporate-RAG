@@ -1,7 +1,7 @@
 import { pgTable, uuid, varchar, text, bigint, boolean, timestamp, jsonb, integer, pgEnum } from 'drizzle-orm/pg-core';
-import { organizations } from './organizations';
-import { users } from './users';
-import { folders } from './folders';
+import { organizations } from './organizations.js';
+import { users } from './users.js';
+import { folders } from './folders.js';
 
 export const documentStatusEnum = pgEnum('document_status', ['uploaded', 'processing', 'ready', 'failed', 'deleted']);
 
