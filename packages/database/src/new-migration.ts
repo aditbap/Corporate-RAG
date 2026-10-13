@@ -19,4 +19,4 @@ const tag = `${String(idx).padStart(4, '0')}_${name}`;
 fs.writeFileSync(path.join(dir, `${tag}.sql`), `-- ${tag}\n-- Hand-written SQL. Use vector(N) unquoted. Statements run in one transaction.\n`);
 journal.entries.push({ idx, version: '5', when: Date.now(), tag, breakpoints: true });
 fs.writeFileSync(journalPath, JSON.stringify(journal, null, 2) + '\n');
-console.log(`created src/migrations/${tag}.sql`);
+process.stdout.write(`created src/migrations/${tag}.sql\n`);
