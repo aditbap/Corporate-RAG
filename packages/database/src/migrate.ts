@@ -90,7 +90,8 @@ export async function runMigrations(databaseUrl: string, opts: { baseline?: stri
 }
 
 // CLI entrypoint (not when imported by tests).
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+// realpath on both sides: in the pnpm-deployed image argv[1] is a symlink into node_modules/.pnpm.
+if (process.argv[1] && fs.realpathSync(fileURLToPath(import.meta.url)) === fs.realpathSync(path.resolve(process.argv[1]))) {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     console.error('DATABASE_URL is not set');
