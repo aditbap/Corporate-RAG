@@ -71,6 +71,9 @@ update-*.ts
 *.md
 !README.md
 !CHANGELOG.md
+!CONTRIBUTING.md
+!SECURITY.md
+!docs/**/*.md
 
 # Uploads / Data
 uploads/
