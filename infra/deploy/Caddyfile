@@ -1,0 +1,27 @@
+# Reverse proxy with automatic HTTPS (Let's Encrypt). DNS A records for all three hostnames must
+# point at this server, and ports 80/443 must be open, before the first start.
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+{$API_DOMAIN} {
+	# Chat streams server-sent events; don't buffer them.
+	reverse_proxy api:3002 {
+		flush_interval -1
+		transport http {
+			response_header_timeout 5m
+		}
+	}
+	request_body {
+		max_size 110MB
+	}
+}
+
+{$AUTH_DOMAIN} {
+	reverse_proxy keycloak:8080
+}
