@@ -5,9 +5,11 @@
 FROM python:3.11-slim
 
 # libgl1/libglib2.0-0: required by opencv-python-headless, a paddleocr dependency
+# libgomp1: OpenMP runtime, required by paddlepaddle's libpaddle (ImportError: libgomp.so.1)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
