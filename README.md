@@ -44,7 +44,7 @@ pnpm db:migrate && pnpm dev
 
 ## Deploy
 
-Single-server production stack with automatic HTTPS: see [infra/deploy/README.md](infra/deploy/README.md).
+Single-server production stack: [Docker Compose + Caddy](infra/deploy/README.md) or [Dokploy](infra/deploy/DOKPLOY.md).
 CI (`.github/workflows/ci.yml`) typechecks, lints, tests, builds and scans the images on every PR.
 
 ## Quality checks

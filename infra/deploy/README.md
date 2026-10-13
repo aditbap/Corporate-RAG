@@ -1,5 +1,7 @@
 # Production deploy (single server, Docker Compose)
 
+> Using Dokploy? See [DOKPLOY.md](DOKPLOY.md). The rest of this file covers the plain Docker Compose + Caddy route.
+
 Stack: Caddy (auto-HTTPS) → web / api / keycloak; worker, prometheus, grafana (SSH tunnel to 127.0.0.1:3003 only), postgres(pgvector), redis, minio, ocr, clamav stay internal.
 
 ## Prerequisites
