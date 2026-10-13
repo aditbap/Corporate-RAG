@@ -1,6 +1,6 @@
 import { pgTable, uuid, varchar, text, timestamp, jsonb, integer, pgEnum } from 'drizzle-orm/pg-core';
-import { organizations } from './organizations';
-import { documents, documentVersions } from './documents';
+import { organizations } from './organizations.js';
+import { documents, documentVersions } from './documents.js';
 
 export const jobStatusEnum = pgEnum('job_status', [
   'pending', 'parsing', 'chunking', 'embedding',

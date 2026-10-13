@@ -1,4 +1,4 @@
-import { db } from '../client';
+import { db } from '../client.js';
 
 export abstract class BaseRepository {
   protected readonly db = db;

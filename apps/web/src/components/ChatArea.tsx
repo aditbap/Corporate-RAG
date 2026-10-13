@@ -10,7 +10,7 @@ import remarkGfm from 'remark-gfm'
 import TextareaAutosize from 'react-textarea-autosize'
 import { cn } from '@/lib/utils'
 import type { ChatMessage, Citation } from '@/types/chat'
-import { useLibraryAccess } from '@/lib/active-library'
+import { useLibraryAccess, readApiError } from '@/lib/active-library'
 import { loadChatScope, saveChatScope } from '@/lib/chat-scope'
 import { createSpeechSession, isSpeechSupported, type SpeechSession } from '@/lib/speech'
 
@@ -284,7 +284,7 @@ export function ChatArea({
           body: formData
         })
 
-        if (!res.ok) throw new Error('Upload failed')
+        if (!res.ok) throw new Error(await readApiError(res, 'Upload failed'))
         
         const json = await res.json()
         if (json.data?.id) {
@@ -295,8 +295,9 @@ export function ChatArea({
         }
 
         setUploadStatus({ file: file.name, status: 'success' })
-      } catch {
+      } catch (err) {
         setUploadStatus({ file: file.name, status: 'error' })
+        showNotification(err instanceof Error ? err.message : 'Upload failed')
       }
       
       // Brief pause between status updates to show each file

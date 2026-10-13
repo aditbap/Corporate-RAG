@@ -1,6 +1,6 @@
-import { eq, and, isNull, desc, getTableColumns } from 'drizzle-orm';
-import { BaseRepository } from './base.repository';
-import { documents, documentVersions, users } from '../schema/index';
+import { eq, and, isNull, desc, getTableColumns, sql } from 'drizzle-orm';
+import { BaseRepository } from './base.repository.js';
+import { documents, documentVersions, users } from '../schema/index.js';
 
 export class DocumentRepository extends BaseRepository {
   constructor() {
@@ -105,6 +105,21 @@ export class DocumentRepository extends BaseRepository {
       .where(and(eq(documents.id, id), eq(documents.orgId, tenantId)))
       .returning();
     return result;
+  }
+
+  /** Live documents and bytes stored (every version's object counts) for quota enforcement. */
+  async usage(tenantId: string): Promise<{ documentCount: number; storageBytes: number }> {
+    this.requireTenant(tenantId);
+    const [docs] = await this.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(documents)
+      .where(and(eq(documents.orgId, tenantId), eq(documents.isDeleted, false)));
+    const [bytes] = await this.db
+      .select({ n: sql<number>`coalesce(sum(${documentVersions.fileSizeBytes}), 0)::float8` })
+      .from(documentVersions)
+      .innerJoin(documents, eq(documents.id, documentVersions.documentId))
+      .where(and(eq(documentVersions.orgId, tenantId), eq(documents.isDeleted, false)));
+    return { documentCount: docs?.n ?? 0, storageBytes: Number(bytes?.n ?? 0) };
   }
 
   async rename(tenantId: string, id: string, name: string) {

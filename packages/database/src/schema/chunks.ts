@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, varchar, integer, boolean, timestamp, jsonb, customType } from 'drizzle-orm/pg-core';
-import { organizations } from './organizations';
-import { documents, documentVersions } from './documents';
+import { organizations } from './organizations.js';
+import { documents, documentVersions } from './documents.js';
 
 export const documentChunks = pgTable('document_chunks', {
   id: uuid('id').defaultRandom().primaryKey(),

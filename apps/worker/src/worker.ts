@@ -1,4 +1,4 @@
-import { Worker, Job } from 'bullmq'; // force reload
+import { Worker, Job, UnrecoverableError } from 'bullmq';
 import { INGESTION_QUEUE_NAME, redisConnection } from './queue.js';
 import { JobRepository, ChunkRepository, DocumentRepository } from '@rag/database';
 import {
@@ -50,7 +50,9 @@ export const ingestionWorker = new Worker<IngestionJobData>(
         await jobRepo.updateStatus(orgId, jobId, 'parsing', 'scanning_for_viruses', {});
         const scanResult = await scanBuffer(buffer);
         if (scanResult.infected) {
-          throw new Error(`File rejected: virus scan matched signature "${scanResult.signature}"`);
+          // Remove the object so nobody can download it, and don't retry: it will never pass.
+          await storage.delete(objectKey).catch((err) => console.error(`[Worker] Could not delete rejected file ${objectKey}:`, err));
+          throw new UnrecoverableError(`File rejected: virus scan matched signature "${scanResult.signature}"`);
         }
       }
 

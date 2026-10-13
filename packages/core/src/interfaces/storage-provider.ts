@@ -14,6 +14,12 @@ export interface StorageProvider {
 
   delete(key: string): Promise<void>;
 
+  /** Deletes every object whose key starts with `prefix`; returns how many were removed. */
+  deleteByPrefix(prefix: string): Promise<number>;
+
+  /** Throws if the storage backend (or the configured bucket) is unreachable. */
+  ping(): Promise<void>;
+
   /** Pre-signed URL for direct client access, valid for `expiresInSeconds`. */
   getSignedUrl(key: string, expiresInSeconds?: number): Promise<string>;
 }

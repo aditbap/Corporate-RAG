@@ -38,6 +38,9 @@ export class LibraryRepository extends BaseRepository {
         role: memberships.role,
         memberCount: sql<number>`(select count(*)::int from ${memberships} m where m.org_id = ${organizations.id} and m.is_active = true)`,
         documentCount: sql<number>`(select count(*)::int from ${documents} d where d.org_id = ${organizations.id} and d.is_deleted = false)`,
+        storageBytes: sql<number>`(select coalesce(sum(v.file_size_bytes), 0)::float8 from document_versions v join documents d on d.id = v.document_id where v.org_id = ${organizations.id} and d.is_deleted = false)`,
+        maxDocuments: organizations.maxDocuments,
+        maxStorageMb: organizations.maxStorageMb,
       })
       .from(memberships)
       .innerJoin(organizations, eq(organizations.id, memberships.orgId))
@@ -49,7 +52,12 @@ export class LibraryRepository extends BaseRepository {
     return this.db.transaction(async (tx) => {
       const [org] = await tx
         .insert(organizations)
-        .values({ name: input.name, slug: slugify(input.name), description: input.description ?? null, kind: 'shared', createdBy: userId })
+        .values({
+          name: input.name, slug: slugify(input.name), description: input.description ?? null, kind: 'shared', createdBy: userId,
+          // Deployment-wide defaults for new libraries (existing rows keep their own limits).
+          ...(process.env.DEFAULT_MAX_DOCUMENTS ? { maxDocuments: parseInt(process.env.DEFAULT_MAX_DOCUMENTS, 10) } : {}),
+          ...(process.env.DEFAULT_MAX_STORAGE_MB ? { maxStorageMb: parseInt(process.env.DEFAULT_MAX_STORAGE_MB, 10) } : {}),
+        })
         .returning();
       if (!org) throw new Error('Failed to create library');
       await tx.insert(memberships).values({ userId, orgId: org.id, role: 'owner' });

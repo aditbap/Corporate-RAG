@@ -88,6 +88,9 @@ export interface Library {
   role: 'owner' | 'admin' | 'member' | 'viewer'
   memberCount: number
   documentCount: number
+  storageBytes: number
+  maxDocuments: number
+  maxStorageMb: number
 }
 
 export interface Member {
@@ -157,4 +160,10 @@ export function useLibraryAccess(): LibraryAccess {
     canManageFolders: isAdmin,
     canMutateDoc: (uploadedBy) => isAdmin || (role === 'member' && !!uploadedBy && uploadedBy === state?.userId),
   }
+}
+
+/** Best-effort message from an apps/api error response ({ error: { message } }). */
+export async function readApiError(res: Response, fallback: string): Promise<string> {
+  const body = await res.json().catch(() => null)
+  return body?.error?.message ?? fallback
 }

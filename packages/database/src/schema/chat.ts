@@ -1,9 +1,9 @@
 import { relations } from 'drizzle-orm';
 import { pgTable, uuid, varchar, text, timestamp, jsonb, boolean, integer, decimal, pgEnum, real } from 'drizzle-orm/pg-core';
-import { organizations } from './organizations';
-import { users } from './users';
-import { documents } from './documents';
-import { documentChunks } from './chunks';
+import { organizations } from './organizations.js';
+import { users } from './users.js';
+import { documents } from './documents.js';
+import { documentChunks } from './chunks.js';
 
 export const conversations = pgTable('conversations', {
   id: uuid('id').defaultRandom().primaryKey(),

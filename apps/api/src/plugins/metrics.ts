@@ -1,5 +1,7 @@
+import http from 'node:http';
 import { FastifyInstance } from 'fastify';
 import client from 'prom-client';
+import { ingestionQueue } from '../queue.js';
 
 const register = new client.Registry();
 client.collectDefaultMetrics({ register });
@@ -26,11 +28,27 @@ export const ragCacheHits = new client.Counter({
   registers: [register],
 });
 
+// Ingestion backlog: the signal that uploads are piling up (worker down, embedding API failing).
+new client.Gauge({
+  name: 'ingestion_queue_jobs',
+  help: 'Document-ingestion jobs by state',
+  labelNames: ['state'],
+  registers: [register],
+  async collect() {
+    try {
+      const counts = await ingestionQueue.getJobCounts('waiting', 'active', 'delayed', 'failed');
+      for (const [state, n] of Object.entries(counts)) this.set({ state }, n);
+    } catch {
+      /* Redis unreachable: leave the last values; the readiness probe reports the outage */
+    }
+  },
+});
+
 /**
- * Registers the /metrics scrape endpoint and a request-duration hook. Deliberately
- * NOT behind the `authenticate` hook (it's mounted outside the /api/v1 context,
- * same as /health) — Prometheus has no way to carry a Keycloak bearer token, and
- * this endpoint only exposes aggregate counters, not per-tenant data.
+ * Request-duration hook, plus the /metrics endpoint in development. In production /metrics is NOT
+ * served on the public API port — it would be reachable by anyone who can reach the API. Instead
+ * startMetricsServer() exposes it on a separate internal port (METRICS_PORT) that the reverse
+ * proxy never routes to and only Prometheus on the private network can reach.
  */
 const requestStart = new WeakMap<object, bigint>();
 
@@ -49,8 +67,24 @@ export function registerMetrics(server: FastifyInstance) {
     );
   });
 
-  server.get('/metrics', async (_request, reply) => {
-    reply.header('Content-Type', register.contentType);
-    return register.metrics();
+  if (process.env.NODE_ENV !== 'production') {
+    server.get('/metrics', async (_request, reply) => {
+      reply.header('Content-Type', register.contentType);
+      return register.metrics();
+    });
+  }
+}
+
+/** Serves only GET /metrics. Bind to a private interface/network; it carries no authentication. */
+export function startMetricsServer(port: number, host = '0.0.0.0'): http.Server {
+  const srv = http.createServer(async (req, res) => {
+    if (req.method === 'GET' && req.url === '/metrics') {
+      res.writeHead(200, { 'Content-Type': register.contentType });
+      res.end(await register.metrics());
+    } else {
+      res.writeHead(404).end();
+    }
   });
+  srv.listen(port, host);
+  return srv;
 }
