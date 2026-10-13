@@ -53,7 +53,7 @@ services:
       retries: 5
 
   keycloak:
-    image: quay.io/keycloak/keycloak:latest
+    image: quay.io/keycloak/keycloak:26.0
     container_name: rag-keycloak
     restart: always
     command: start-dev
@@ -104,7 +104,7 @@ services:
       start_period: 180s # first boot downloads virus definitions — this is slow
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.55.1
     container_name: rag-prometheus
     restart: always
     extra_hosts:
@@ -119,7 +119,7 @@ services:
       - "9090:9090"
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.3.0
     container_name: rag-grafana
     restart: always
     environment:

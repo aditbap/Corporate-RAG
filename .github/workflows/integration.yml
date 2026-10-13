@@ -1,0 +1,60 @@
+name: Integration tests
+
+# Needs Keycloak + Postgres + Redis + MinIO, so it runs nightly and on demand rather than on every PR.
+# Promote it to `pull_request` once it has run green for a while.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/rag_platform
+      REDIS_URL: redis://localhost:6379
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: "9000"
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: documents
+      KEYCLOAK_URL: http://localhost:8180
+      KEYCLOAK_REALM: rag-platform
+      CORS_ORIGINS: http://localhost:3000
+      PORT: "3002"
+      NVIDIA_API_KEY: ci-placeholder
+      CLOUDFLARE_ACCOUNT_ID: ci-placeholder
+      CLOUDFLARE_API_TOKEN: ci-placeholder
+      ENABLE_VIRUS_SCAN: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3002/api/v1
+      - name: Start infrastructure
+        run: docker compose -f infra/docker/docker-compose.yml up -d --wait postgres redis minio keycloak
+      - name: Create Keycloak realm
+        run: infra/keycloak/setup-realm.sh
+        env:
+          ENV_FILE: ${{ runner.temp }}/web.env
+      - run: pnpm db:migrate
+      - name: Start API
+        run: |
+          node apps/api/dist/index.js > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://localhost:3002/health && exit 0; sleep 2; done
+          cat api.log; exit 1
+      - run: pnpm --filter @rag/api test:integration
+      - name: API log on failure
+        if: failure()
+        run: cat api.log || true
