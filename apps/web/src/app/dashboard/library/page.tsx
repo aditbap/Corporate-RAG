@@ -529,7 +529,7 @@ export default function LibraryPage() {
 
   return (
     <div 
-      className="flex flex-col h-full bg-black text-zinc-100 relative overflow-hidden font-sans"
+      className="flex flex-col h-full bg-white dark:bg-black text-zinc-900 dark:text-zinc-100 relative overflow-hidden font-sans"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -546,10 +546,10 @@ export default function LibraryPage() {
       {/* Create Folder Modal */}
       {isCreateFolderModalOpen && (
         <div className="absolute inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+          <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-semibold">New Folder</h2>
-              <button onClick={() => setIsCreateFolderModalOpen(false)} className="text-zinc-500 hover:text-zinc-300">
+              <button onClick={() => setIsCreateFolderModalOpen(false)} className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -559,21 +559,21 @@ export default function LibraryPage() {
               placeholder="Folder name" 
               value={createFolderName}
               onChange={(e) => setCreateFolderName(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-700 transition-colors mb-6"
+              className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-300 dark:focus:border-zinc-700 transition-colors mb-6"
               autoFocus
             />
             
             <div className="flex justify-end gap-3">
               <button 
                 onClick={() => setIsCreateFolderModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium hover:bg-zinc-800 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleCreateFolder}
                 disabled={!createFolderName.trim() || isUploading}
-                className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50"
               >
                 Create
               </button>
@@ -585,10 +585,10 @@ export default function LibraryPage() {
       {/* Add Note Modal */}
       {renameTarget && (
         <div className="absolute inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4" onClick={() => setRenameTarget(null)}>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-semibold">Rename {renameTarget.isFolder ? 'folder' : 'document'}</h2>
-              <button onClick={() => setRenameTarget(null)} className="text-zinc-500 hover:text-zinc-300">
+              <button onClick={() => setRenameTarget(null)} className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -599,18 +599,18 @@ export default function LibraryPage() {
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleRename() }}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-700 transition-colors mb-6"
+              className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-300 dark:focus:border-zinc-700 transition-colors mb-6"
               autoFocus
             />
 
             <div className="flex justify-end gap-3">
-              <button onClick={() => setRenameTarget(null)} className="px-4 py-2 text-sm font-medium hover:bg-zinc-800 rounded-lg transition-colors">
+              <button onClick={() => setRenameTarget(null)} className="px-4 py-2 text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors">
                 Cancel
               </button>
               <button
                 onClick={handleRename}
                 disabled={!renameValue.trim()}
-                className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50"
               >
                 Rename
               </button>
@@ -621,10 +621,10 @@ export default function LibraryPage() {
 
       {isAddNoteModalOpen && (
         <div className="absolute inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl flex flex-col max-h-[90vh]">
+          <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center mb-6 shrink-0">
               <h2 className="text-lg font-semibold">New Note</h2>
-              <button onClick={() => setIsAddNoteModalOpen(false)} className="text-zinc-500 hover:text-zinc-300">
+              <button onClick={() => setIsAddNoteModalOpen(false)} className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -635,7 +635,7 @@ export default function LibraryPage() {
                 placeholder="Note title (optional)" 
                 value={noteTitle}
                 onChange={(e) => setNoteTitle(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-700 transition-colors"
+                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-300 dark:focus:border-zinc-700 transition-colors"
                 autoFocus
               />
               
@@ -643,21 +643,21 @@ export default function LibraryPage() {
                 placeholder="Write your note here..." 
                 value={noteContent}
                 onChange={(e) => setNoteContent(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-700 transition-colors min-h-[200px] resize-y"
+                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-300 dark:focus:border-zinc-700 transition-colors min-h-[200px] resize-y"
               />
             </div>
             
             <div className="flex justify-end gap-3 mt-6 shrink-0">
               <button 
                 onClick={() => setIsAddNoteModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium hover:bg-zinc-800 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleCreateNote}
                 disabled={!noteContent.trim() || isUploading}
-                className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50"
               >
                 {isUploading ? 'Saving...' : 'Save Note'}
               </button>
@@ -669,19 +669,19 @@ export default function LibraryPage() {
       {/* Move Modal */}
       {isMoveModalOpen && (
         <div className="absolute inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col max-h-[80vh]">
+          <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col max-h-[80vh]">
             <div className="flex justify-between items-center mb-4 shrink-0">
               <h2 className="text-lg font-semibold">Move {moveTargetId ? '1 item' : `${selectedDocs.size} items`}</h2>
-              <button onClick={() => setIsMoveModalOpen(false)} className="text-zinc-500 hover:text-zinc-300">
+              <button onClick={() => setIsMoveModalOpen(false)} className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto min-h-0 mb-6 space-y-2">
               <div 
                 onClick={() => setSelectedDestinationFolder(null)}
-                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${selectedDestinationFolder === null ? 'bg-blue-500/10 border border-blue-500/30' : 'hover:bg-zinc-800 border border-transparent'}`}
+                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${selectedDestinationFolder === null ? 'bg-blue-500/10 border border-blue-500/30' : 'hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-transparent'}`}
               >
-                <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-400">
+                <div className="w-8 h-8 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-400">
                   <LayoutGrid className="w-4 h-4" />
                 </div>
                 <span className="font-medium text-sm">Library Root</span>
@@ -691,9 +691,9 @@ export default function LibraryPage() {
                 <div 
                   key={folder.id}
                   onClick={() => setSelectedDestinationFolder(folder.id)}
-                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${selectedDestinationFolder === folder.id ? 'bg-blue-500/10 border border-blue-500/30' : 'hover:bg-zinc-800 border border-transparent'}`}
+                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${selectedDestinationFolder === folder.id ? 'bg-blue-500/10 border border-blue-500/30' : 'hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-transparent'}`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-400">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-400">
                     <Folder className="w-4 h-4" />
                   </div>
                   <span className="font-medium text-sm">{folder.name}</span>
@@ -703,13 +703,13 @@ export default function LibraryPage() {
             <div className="flex justify-end gap-3 shrink-0">
               <button 
                 onClick={() => setIsMoveModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium hover:bg-zinc-800 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleMove}
-                className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+                className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
               >
                 Move Here
               </button>
@@ -727,21 +727,21 @@ export default function LibraryPage() {
                 setCurrentFolderId(null);
                 setFolderPath([]);
               }}
-              className={`text-[28px] font-medium tracking-tight whitespace-nowrap transition-colors ${currentFolderId ? 'text-zinc-400 hover:text-zinc-200 cursor-pointer' : 'text-white'}`}
+              className={`text-[28px] font-medium tracking-tight whitespace-nowrap transition-colors ${currentFolderId ? 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer' : 'text-zinc-900 dark:text-white'}`}
             >
               Library
             </button>
             
             {folderPath.map((crumb, index) => (
               <div key={crumb.id} className="flex items-center gap-2 shrink-0">
-                <span className="text-zinc-600 text-[28px] font-light">/</span>
+                <span className="text-zinc-400 dark:text-zinc-600 text-[28px] font-light">/</span>
                 <button
                   onClick={() => {
                     const newPath = folderPath.slice(0, index + 1);
                     setCurrentFolderId(newPath[newPath.length - 1].id);
                     setFolderPath(newPath);
                   }}
-                  className={`text-[28px] font-medium tracking-tight whitespace-nowrap transition-colors ${index === folderPath.length - 1 ? 'text-white' : 'text-zinc-400 hover:text-zinc-200 cursor-pointer'}`}
+                  className={`text-[28px] font-medium tracking-tight whitespace-nowrap transition-colors ${index === folderPath.length - 1 ? 'text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer'}`}
                 >
                   {crumb.name}
                 </button>
@@ -751,13 +751,13 @@ export default function LibraryPage() {
           
           <div className="flex items-center gap-3 shrink-0">
             <div className="relative group">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-200" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 dark:text-zinc-400 group-focus-within:text-zinc-800 dark:group-focus-within:text-zinc-200" />
               <input 
                 type="text" 
                 placeholder="Search" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-48 h-10 bg-zinc-800/60 hover:bg-zinc-800 focus:bg-zinc-800 focus:outline-none rounded-full pl-9 pr-4 text-sm transition-colors border border-transparent focus:border-zinc-700"
+                className="w-48 h-10 bg-zinc-200/60 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-800 focus:bg-zinc-200 dark:focus:bg-zinc-800 focus:outline-none rounded-full pl-9 pr-4 text-sm transition-colors border border-transparent focus:border-zinc-300 dark:focus:border-zinc-700"
               />
             </div>
             
@@ -776,21 +776,21 @@ export default function LibraryPage() {
                   setIsNewDropdownOpen(!isNewDropdownOpen)
                 }}
                 disabled={isUploading}
-                className="flex items-center gap-1.5 h-10 px-4 bg-white text-black text-sm font-medium rounded-full hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 h-10 px-4 bg-white text-black text-sm font-medium rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50"
               >
                 {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'New'}
                 {!isUploading && <ChevronDown className="w-4 h-4 opacity-60" />}
               </button>
 
               {isNewDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <div className="absolute right-0 top-full mt-2 w-48 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2">
                   <button 
                     onClick={(e) => {
                       e.stopPropagation()
                       setIsAddNoteModalOpen(true)
                       setIsNewDropdownOpen(false)
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3"
+                    className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3"
                   >
                     <FileText className="w-4 h-4"/> Add note
                   </button>
@@ -800,18 +800,18 @@ export default function LibraryPage() {
                       setIsCreateFolderModalOpen(true)
                       setIsNewDropdownOpen(false)
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3"
+                    className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3"
                   >
                     <FolderPlus className="w-4 h-4"/> Add folder
                   </button>
-                  <div className="h-px bg-zinc-800/80 my-1.5 mx-2" />
+                  <div className="h-px bg-zinc-200/80 dark:bg-zinc-800/80 my-1.5 mx-2" />
                   <button 
                     onClick={(e) => {
                       e.stopPropagation()
                       setIsNewDropdownOpen(false)
                       fileInputRef.current?.click()
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3"
+                    className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3"
                   >
                     <Upload className="w-4 h-4"/> Upload files
                   </button>
@@ -830,19 +830,19 @@ export default function LibraryPage() {
                   const ids = Array.from(selectedDocs).join(',');
                   router.push(`/dashboard/chat/new?docIds=${encodeURIComponent(ids)}`);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-black text-sm font-medium rounded-full hover:bg-zinc-200 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-white text-black text-sm font-medium rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
               >
                 <MessageSquare className="w-4 h-4" /> Start chat
               </button>
               <button
                 onClick={handleBulkDownload}
-                className="flex items-center gap-2 px-4 py-2 border border-zinc-700 bg-zinc-900/50 text-zinc-300 text-sm font-medium rounded-full hover:bg-zinc-800 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border border-zinc-300 dark:border-zinc-700 bg-zinc-100/50 dark:bg-zinc-900/50 text-zinc-700 dark:text-zinc-300 text-sm font-medium rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
               >
                 <Download className="w-4 h-4" /> Download
               </button>
               {selectedMutable && (<><button 
                 onClick={() => openMoveModal()}
-                className="flex items-center gap-2 px-4 py-2 border border-zinc-700 bg-zinc-900/50 text-zinc-300 text-sm font-medium rounded-full hover:bg-zinc-800 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border border-zinc-300 dark:border-zinc-700 bg-zinc-100/50 dark:bg-zinc-900/50 text-zinc-700 dark:text-zinc-300 text-sm font-medium rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
               >
                 <FolderOutput className="w-4 h-4" /> Move
               </button>
@@ -859,7 +859,7 @@ export default function LibraryPage() {
                 <button 
                   key={tab}
                   onClick={() => setActiveTab(tab as typeof activeTab)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeTab === tab ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'}`}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeTab === tab ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/40 dark:hover:bg-zinc-800/40'}`}
                 >
                   {tab}
                 </button>
@@ -867,7 +867,7 @@ export default function LibraryPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-4 text-zinc-400 text-sm">
+          <div className="flex items-center gap-4 text-zinc-600 dark:text-zinc-400 text-sm">
             {selectedDocs.size > 0 ? (
               <span className="font-medium">{selectedDocs.size} selected</span>
             ) : (
@@ -876,19 +876,19 @@ export default function LibraryPage() {
                   <button
                     aria-label="Filter by uploader"
                     onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'filter' ? null : 'filter') }}
-                    className={`relative p-2 transition-colors rounded-full hover:bg-zinc-800/50 ${uploaderFilter ? 'text-blue-400' : 'hover:text-zinc-200'}`}
+                    className={`relative p-2 transition-colors rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 ${uploaderFilter ? 'text-blue-400' : 'hover:text-zinc-800 dark:hover:text-zinc-200'}`}
                   >
                     <Filter className="w-[18px] h-[18px]" />
                     {uploaderFilter && <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-blue-400" />}
                   </button>
                   {activeDropdown === 'filter' && (
-                    <div className="absolute right-0 top-full mt-1 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="absolute right-0 top-full mt-1 w-56 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2" onClick={(e) => e.stopPropagation()}>
                       <div className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Uploaded by</div>
                       {[{ id: null as string | null, label: 'Everyone' }, ...uploaders].map((u) => (
                         <button
                           key={u.id ?? 'all'}
                           onClick={() => { setUploaderFilter(u.id); setActiveDropdown(null) }}
-                          className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3"
+                          className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3"
                         >
                           <Check className={`w-4 h-4 ${uploaderFilter === u.id ? 'opacity-100' : 'opacity-0'}`} />
                           <span className="truncate">{u.label}{u.id === access.userId ? ' (you)' : ''}</span>
@@ -900,18 +900,18 @@ export default function LibraryPage() {
               )
             )}
             
-            <div className="w-px h-4 bg-zinc-700" />
+            <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-700" />
             
             <div className="flex items-center gap-0.5">
               <button 
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-full transition-colors ${viewMode === 'grid' ? 'bg-zinc-800 text-zinc-200' : 'hover:text-zinc-200 hover:bg-zinc-800/50'}`}
+                className={`p-2 rounded-full transition-colors ${viewMode === 'grid' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200' : 'hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50'}`}
               >
                 <LayoutGrid className="w-[18px] h-[18px]" />
               </button>
               <button 
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-full transition-colors ${viewMode === 'list' ? 'bg-zinc-800 text-zinc-200' : 'hover:text-zinc-200 hover:bg-zinc-800/50'}`}
+                className={`p-2 rounded-full transition-colors ${viewMode === 'list' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200' : 'hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50'}`}
               >
                 <List className="w-[18px] h-[18px]" />
               </button>
@@ -924,7 +924,7 @@ export default function LibraryPage() {
           {loading ? (
             viewMode === 'list' ? (
               <div className="w-full text-sm min-w-[500px]">
-                <div className="flex items-center text-zinc-400 border-b border-zinc-800/80 pb-3 mb-2">
+                <div className="flex items-center text-zinc-600 dark:text-zinc-400 border-b border-zinc-200/80 dark:border-zinc-800/80 pb-3 mb-2">
                   <div className="w-12 flex justify-center">
                     <div className="w-[18px] h-[18px] rounded-[4px] border-2 border-zinc-500/30" />
                   </div>
@@ -937,20 +937,20 @@ export default function LibraryPage() {
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} className="flex items-center py-3 border-b border-transparent">
                       <div className="w-12 flex justify-center">
-                        <div className="w-[18px] h-[18px] rounded-[4px] bg-zinc-800/50 animate-pulse" />
+                        <div className="w-[18px] h-[18px] rounded-[4px] bg-zinc-200/50 dark:bg-zinc-800/50 animate-pulse" />
                       </div>
                       
                       <div className="flex-1 flex items-center gap-4 pl-2 pr-4">
-                        <div className="w-[30px] h-[30px] rounded-[8px] bg-zinc-800/50 animate-pulse shrink-0" />
-                        <div className="h-4 bg-zinc-800/50 rounded animate-pulse w-48" />
+                        <div className="w-[30px] h-[30px] rounded-[8px] bg-zinc-200/50 dark:bg-zinc-800/50 animate-pulse shrink-0" />
+                        <div className="h-4 bg-zinc-200/50 dark:bg-zinc-800/50 rounded animate-pulse w-48" />
                       </div>
                       
                       <div className="w-32 shrink-0">
-                        <div className="h-4 bg-zinc-800/50 rounded animate-pulse w-24" />
+                        <div className="h-4 bg-zinc-200/50 dark:bg-zinc-800/50 rounded animate-pulse w-24" />
                       </div>
                       
                       <div className="w-24 shrink-0 pr-4">
-                        <div className="h-4 bg-zinc-800/50 rounded animate-pulse w-12" />
+                        <div className="h-4 bg-zinc-200/50 dark:bg-zinc-800/50 rounded animate-pulse w-12" />
                       </div>
                     </div>
                   ))}
@@ -959,12 +959,12 @@ export default function LibraryPage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-2">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-                  <div key={i} className="flex flex-col border border-transparent rounded-xl p-3 bg-zinc-900/50">
-                    <div className="h-28 w-full bg-zinc-800/30 rounded-lg flex items-center justify-center mb-3 animate-pulse">
-                      <div className="w-12 h-12 rounded-xl bg-zinc-800/50" />
+                  <div key={i} className="flex flex-col border border-transparent rounded-xl p-3 bg-zinc-100/50 dark:bg-zinc-900/50">
+                    <div className="h-28 w-full bg-zinc-200/30 dark:bg-zinc-800/30 rounded-lg flex items-center justify-center mb-3 animate-pulse">
+                      <div className="w-12 h-12 rounded-xl bg-zinc-200/50 dark:bg-zinc-800/50" />
                     </div>
-                    <div className="h-4 bg-zinc-800/50 rounded animate-pulse w-3/4 mb-2 mx-1" />
-                    <div className="h-3 bg-zinc-800/30 rounded animate-pulse w-1/2 mx-1" />
+                    <div className="h-4 bg-zinc-200/50 dark:bg-zinc-800/50 rounded animate-pulse w-3/4 mb-2 mx-1" />
+                    <div className="h-3 bg-zinc-200/30 dark:bg-zinc-800/30 rounded animate-pulse w-1/2 mx-1" />
                   </div>
                 ))}
               </div>
@@ -976,7 +976,7 @@ export default function LibraryPage() {
             </div>
           ) : viewMode === 'list' ? (
             <div className="w-full text-sm min-w-[500px]">
-              <div className="flex items-center text-zinc-400 border-b border-zinc-800/80 pb-3 mb-2">
+              <div className="flex items-center text-zinc-600 dark:text-zinc-400 border-b border-zinc-200/80 dark:border-zinc-800/80 pb-3 mb-2">
                 <div 
                   onClick={toggleAll}
                   className="w-12 flex justify-center cursor-pointer"
@@ -984,9 +984,9 @@ export default function LibraryPage() {
                   <div className={`w-[18px] h-[18px] rounded-[4px] border-2 flex items-center justify-center transition-colors ${
                     isAllSelected ? 'bg-white border-white' : 
                     isPartiallySelected ? 'bg-white border-white' : 
-                    'border-zinc-500 hover:border-zinc-300'
+                    'border-zinc-500 hover:border-zinc-700 dark:hover:border-zinc-300'
                   }`}>
-                    {isAllSelected && <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />}
+                    {isAllSelected && <Check className="w-3.5 h-3.5 text-white dark:text-black" strokeWidth={3} />}
                     {isPartiallySelected && <Minus className="w-3.5 h-3.5 text-black" strokeWidth={3} />}
                   </div>
                 </div>
@@ -1003,14 +1003,14 @@ export default function LibraryPage() {
                       setCurrentFolderId(folder.id);
                       setFolderPath(prev => [...prev, { id: folder.id, name: folder.name }]);
                     }}
-                    className="group flex items-center py-3 rounded-xl transition-colors cursor-pointer border-b border-transparent hover:bg-[#202123]/80 hover:border-zinc-800/50"
+                    className="group flex items-center py-3 rounded-xl transition-colors cursor-pointer border-b border-transparent hover:bg-[#202123]/80 hover:border-zinc-200/50 dark:hover:border-zinc-800/50"
                   >
                     <div className="w-12 flex justify-center">
                       <div className="w-[18px] h-[18px]" />
                     </div>
                     
                     <div className="flex-1 flex items-center gap-4 overflow-hidden pl-2 pr-4">
-                      <div className="w-[30px] h-[30px] rounded-[8px] bg-zinc-800 flex items-center justify-center text-zinc-400 shrink-0">
+                      <div className="w-[30px] h-[30px] rounded-[8px] bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-400 shrink-0">
                         <Folder className="w-[14px] h-[14px]" />
                       </div>
                       <span 
@@ -1019,17 +1019,17 @@ export default function LibraryPage() {
                           setCurrentFolderId(folder.id);
                           setFolderPath(prev => [...prev, { id: folder.id, name: folder.name }]);
                         }} 
-                        className="truncate text-[15px] font-medium text-zinc-200 hover:underline"
+                        className="truncate text-[15px] font-medium text-zinc-800 dark:text-zinc-200 hover:underline"
                       >
                         {folder.name}
                       </span>
                     </div>
                     
-                    <div className="w-32 text-zinc-400 shrink-0">
+                    <div className="w-32 text-zinc-600 dark:text-zinc-400 shrink-0">
                       {formatDate(folder.createdAt)}
                     </div>
                     
-                    <div className="w-24 text-zinc-400 shrink-0 flex items-center justify-between relative pr-4">
+                    <div className="w-24 text-zinc-600 dark:text-zinc-400 shrink-0 flex items-center justify-between relative pr-4">
                       <span>—</span>
                       
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1038,25 +1038,25 @@ export default function LibraryPage() {
                             e.stopPropagation(); 
                             setActiveDropdown(activeDropdown === folder.id ? null : folder.id); 
                           }}
-                          className={`p-1.5 hover:text-zinc-200 hover:bg-zinc-700 rounded-md transition-colors ${activeDropdown === folder.id ? 'bg-zinc-700 text-zinc-200 opacity-100' : ''} ${access.canManageFolders ? '' : 'hidden'}`}
+                          className={`p-1.5 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-md transition-colors ${activeDropdown === folder.id ? 'bg-zinc-300 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 opacity-100' : ''} ${access.canManageFolders ? '' : 'hidden'}`}
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                       </div>
 
                       {access.canManageFolders && activeDropdown === folder.id && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                          <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(folder.id, folder.name, true); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                          <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(folder.id, folder.name, true); }} className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3">
                             <Edit2 className="w-4 h-4"/> Rename
                           </button>
-                          <div className="h-px bg-zinc-800/80 my-1.5 mx-2" />
+                          <div className="h-px bg-zinc-200/80 dark:bg-zinc-800/80 my-1.5 mx-2" />
                           <button 
                             onClick={(e) => { 
                               e.stopPropagation(); 
                               setDeleteConfirm({ isOpen: true, type: 'single', id: folder.id, isFolder: true }); 
                               setActiveDropdown(null); 
                             }} 
-                            className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 flex items-center gap-3"
+                            className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3"
                           >
                             <Trash2 className="w-4 h-4"/> Delete
                           </button>
@@ -1072,34 +1072,34 @@ export default function LibraryPage() {
                     <div 
                       key={doc.id} 
                       onClick={() => toggleSelection(doc.id)}
-                      className={`group flex items-center py-3 rounded-xl transition-colors cursor-pointer border-b border-transparent ${isSelected ? 'bg-zinc-800/60' : 'hover:bg-[#202123]/80 hover:border-zinc-800/50'}`}
+                      className={`group flex items-center py-3 rounded-xl transition-colors cursor-pointer border-b border-transparent ${isSelected ? 'bg-zinc-200/60 dark:bg-zinc-800/60' : 'hover:bg-[#202123]/80 hover:border-zinc-200/50 dark:hover:border-zinc-800/50'}`}
                     >
                       <div className="w-12 flex justify-center">
                         <div className={`w-[18px] h-[18px] rounded-[4px] border-2 flex items-center justify-center transition-colors ${
-                          isSelected ? 'bg-white border-white' : 'border-zinc-500 group-hover:border-zinc-300 opacity-0 group-hover:opacity-100'
+                          isSelected ? 'bg-white border-white' : 'border-zinc-500 group-hover:border-zinc-700 dark:group-hover:border-zinc-300 opacity-0 group-hover:opacity-100'
                         }`}>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />}
+                          {isSelected && <Check className="w-3.5 h-3.5 text-white dark:text-black" strokeWidth={3} />}
                         </div>
                       </div>
                       
                       <div 
-                        className="flex-1 flex items-center gap-4 overflow-hidden pl-2 pr-4 hover:bg-zinc-800/40 rounded-lg py-1 -my-1 cursor-pointer transition-colors"
+                        className="flex-1 flex items-center gap-4 overflow-hidden pl-2 pr-4 hover:bg-zinc-200/40 dark:hover:bg-zinc-800/40 rounded-lg py-1 -my-1 cursor-pointer transition-colors"
                         onClick={(e) => { e.stopPropagation(); handleView(doc.id, doc.fileName, doc.fileType); }}
                       >
                         <div className="w-[30px] h-[30px] rounded-[8px] bg-blue-900/20 border border-blue-800/40 flex items-center justify-center text-blue-500 shrink-0">
                           {doc.fileType.includes('image') ? <ImageIcon className="w-[14px] h-[14px]" /> : <FileText className="w-[14px] h-[14px]" />}
                         </div>
-                        <span className="truncate text-[15px] font-medium text-zinc-200 group-hover:text-blue-400 transition-colors">{doc.fileName}</span>
+                        <span className="truncate text-[15px] font-medium text-zinc-800 dark:text-zinc-200 group-hover:text-blue-400 transition-colors">{doc.fileName}</span>
                       </div>
                       
-                      <div className="w-32 text-zinc-400 shrink-0">
+                      <div className="w-32 text-zinc-600 dark:text-zinc-400 shrink-0">
                         {formatDate(doc.createdAt)}
                         {(doc.uploaderName || doc.uploaderEmail) && (
                           <div className="text-[11px] text-zinc-500 truncate" title={doc.uploaderEmail ?? undefined}>by {doc.uploaderName || doc.uploaderEmail}</div>
                         )}
                       </div>
                       
-                      <div className="w-24 text-zinc-400 shrink-0 flex items-center justify-between relative pr-4">
+                      <div className="w-24 text-zinc-600 dark:text-zinc-400 shrink-0 flex items-center justify-between relative pr-4">
                         <span>{formatSize(doc.fileSizeBytes)}</span>
                         
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1108,24 +1108,24 @@ export default function LibraryPage() {
                               e.stopPropagation(); 
                               setActiveDropdown(activeDropdown === doc.id ? null : doc.id); 
                             }}
-                            className={`p-1.5 hover:text-zinc-200 hover:bg-zinc-700 rounded-md transition-colors ${activeDropdown === doc.id ? 'bg-zinc-700 text-zinc-200 opacity-100' : ''}`}
+                            className={`p-1.5 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-md transition-colors ${activeDropdown === doc.id ? 'bg-zinc-300 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 opacity-100' : ''}`}
                           >
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
                         </div>
 
                         {activeDropdown === doc.id && (
-                          <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                            <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); router.push(`/dashboard/chat/new?docIds=${encodeURIComponent(doc.id)}`); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); router.push(`/dashboard/chat/new?docIds=${encodeURIComponent(doc.id)}`); }} className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3">
                               <MessageSquare className="w-4 h-4"/> Chat about this
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleView(doc.id, doc.fileName, doc.fileType); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleView(doc.id, doc.fileName, doc.fileType); }} className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3">
                               <Eye className="w-4 h-4"/> View
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleDownload(doc.id, doc.fileName); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleDownload(doc.id, doc.fileName); }} className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3">
                               <Download className="w-4 h-4"/> Download
                             </button>
-                            {access.canMutateDoc(doc.uploadedBy) && (<><button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(doc.id, doc.fileName, false); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                            {access.canMutateDoc(doc.uploadedBy) && (<><button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(doc.id, doc.fileName, false); }} className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3">
                               <Edit2 className="w-4 h-4"/> Rename
                             </button>
                             <button 
@@ -1134,18 +1134,18 @@ export default function LibraryPage() {
                                 setActiveDropdown(null);
                                 openMoveModal(doc.id);
                               }}
-                              className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3"
                             >
                               <FolderOutput className="w-4 h-4"/> Move
                             </button>
-                            <div className="h-px bg-zinc-800/80 my-1.5 mx-2" />
+                            <div className="h-px bg-zinc-200/80 dark:bg-zinc-800/80 my-1.5 mx-2" />
                             <button 
                               onClick={(e) => { 
                                 e.stopPropagation(); 
                                 setDeleteConfirm({ isOpen: true, type: 'single', id: doc.id, isFolder: false }); 
                                 setActiveDropdown(null); 
                               }} 
-                              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3"
                             >
                               <Trash2 className="w-4 h-4"/> Delete
                             </button></>)}
@@ -1170,7 +1170,7 @@ export default function LibraryPage() {
                     setCurrentFolderId(folder.id);
                     setFolderPath(prev => [...prev, { id: folder.id, name: folder.name }]);
                   }}
-                  className="group relative flex flex-col hover:bg-[#202123] border border-transparent rounded-xl p-3 cursor-pointer transition-colors bg-zinc-900/50"
+                  className="group relative flex flex-col hover:bg-[#202123] border border-transparent rounded-xl p-3 cursor-pointer transition-colors bg-zinc-100/50 dark:bg-zinc-900/50"
                 >
                   <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100">
                     <button 
@@ -1178,24 +1178,24 @@ export default function LibraryPage() {
                         e.stopPropagation(); 
                         setActiveDropdown(activeDropdown === folder.id ? null : folder.id); 
                       }}
-                      className={`p-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 rounded-md backdrop-blur-sm transition-colors ${access.canManageFolders ? '' : 'hidden'} ${activeDropdown === folder.id ? 'bg-zinc-700 opacity-100' : ''}`}
+                      className={`p-1.5 bg-zinc-200/80 dark:bg-zinc-800/80 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md backdrop-blur-sm transition-colors ${access.canManageFolders ? '' : 'hidden'} ${activeDropdown === folder.id ? 'bg-zinc-300 dark:bg-zinc-700 opacity-100' : ''}`}
                     >
                       <MoreHorizontal className="w-[14px] h-[14px]" />
                     </button>
 
                     {access.canManageFolders && activeDropdown === folder.id && (
-                      <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in">
-                        <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(folder.id, folder.name, true); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                      <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in">
+                        <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(folder.id, folder.name, true); }} className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3">
                           <Edit2 className="w-4 h-4"/> Rename
                         </button>
-                        <div className="h-px bg-zinc-800/80 my-1.5 mx-2" />
+                        <div className="h-px bg-zinc-200/80 dark:bg-zinc-800/80 my-1.5 mx-2" />
                         <button 
                           onClick={(e) => { 
                             e.stopPropagation(); 
                             setDeleteConfirm({ isOpen: true, type: 'single', id: folder.id, isFolder: true }); 
                             setActiveDropdown(null); 
                           }} 
-                          className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 flex items-center gap-3"
+                          className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3"
                         >
                           <Trash2 className="w-4 h-4"/> Delete
                         </button>
@@ -1203,12 +1203,12 @@ export default function LibraryPage() {
                     )}
                   </div>
                   
-                  <div className="h-28 w-full bg-zinc-800/30 rounded-lg flex items-center justify-center mb-3">
-                    <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-400">
+                  <div className="h-28 w-full bg-zinc-200/30 dark:bg-zinc-800/30 rounded-lg flex items-center justify-center mb-3">
+                    <div className="w-12 h-12 rounded-xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-400">
                       <Folder className="w-6 h-6" />
                     </div>
                   </div>
-                  <h3 className="font-medium text-sm truncate text-zinc-200 mb-1 px-1">
+                  <h3 className="font-medium text-sm truncate text-zinc-800 dark:text-zinc-200 mb-1 px-1">
                     {folder.name}
                   </h3>
                   <div className="text-xs text-zinc-500 flex items-center justify-between px-1">
@@ -1223,13 +1223,13 @@ export default function LibraryPage() {
                   <div 
                     key={doc.id} 
                     onClick={() => toggleSelection(doc.id)}
-                    className={`group relative flex flex-col hover:bg-[#202123] border border-transparent rounded-xl p-3 cursor-pointer transition-colors ${isSelected ? 'bg-zinc-800/60' : 'bg-zinc-900/50'}`}
+                    className={`group relative flex flex-col hover:bg-[#202123] border border-transparent rounded-xl p-3 cursor-pointer transition-colors ${isSelected ? 'bg-zinc-200/60 dark:bg-zinc-800/60' : 'bg-zinc-100/50 dark:bg-zinc-900/50'}`}
                   >
                     <div className="absolute top-2 left-2 z-10">
                       <div className={`w-[18px] h-[18px] rounded-[4px] border-2 flex items-center justify-center transition-colors ${
-                        isSelected ? 'bg-white border-white opacity-100' : 'border-zinc-500 group-hover:border-zinc-300 opacity-0 group-hover:opacity-100 bg-black/20'
+                        isSelected ? 'bg-zinc-900 border-zinc-900 dark:bg-white dark:border-white opacity-100' : 'border-zinc-500 group-hover:border-zinc-700 dark:group-hover:border-zinc-300 opacity-0 group-hover:opacity-100 bg-black/20'
                       }`}>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />}
+                        {isSelected && <Check className="w-3.5 h-3.5 text-white dark:text-black" strokeWidth={3} />}
                       </div>
                     </div>
                     
@@ -1239,23 +1239,23 @@ export default function LibraryPage() {
                           e.stopPropagation(); 
                           setActiveDropdown(activeDropdown === doc.id ? null : doc.id); 
                         }}
-                        className={`p-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 rounded-md backdrop-blur-sm transition-colors ${activeDropdown === doc.id ? 'bg-zinc-700 opacity-100' : ''}`}
+                        className={`p-1.5 bg-zinc-200/80 dark:bg-zinc-800/80 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md backdrop-blur-sm transition-colors ${activeDropdown === doc.id ? 'bg-zinc-300 dark:bg-zinc-700 opacity-100' : ''}`}
                       >
                         <MoreHorizontal className="w-[14px] h-[14px]" />
                       </button>
 
                       {activeDropdown === doc.id && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in">
-                          <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); router.push(`/dashboard/chat/new?docIds=${encodeURIComponent(doc.id)}`); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in">
+                          <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); router.push(`/dashboard/chat/new?docIds=${encodeURIComponent(doc.id)}`); }} className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3">
                             <MessageSquare className="w-4 h-4"/> Chat about this
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleView(doc.id, doc.fileName, doc.fileType); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                          <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleView(doc.id, doc.fileName, doc.fileType); }} className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3">
                             <Eye className="w-4 h-4"/> View
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleDownload(doc.id, doc.fileName); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                          <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleDownload(doc.id, doc.fileName); }} className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3">
                             <Download className="w-4 h-4"/> Download
                           </button>
-                          {access.canMutateDoc(doc.uploadedBy) && (<><button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(doc.id, doc.fileName, false); }} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
+                          {access.canMutateDoc(doc.uploadedBy) && (<><button onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openRename(doc.id, doc.fileName, false); }} className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3">
                             <Edit2 className="w-4 h-4"/> Rename
                           </button>
                           <button 
@@ -1264,18 +1264,18 @@ export default function LibraryPage() {
                               setActiveDropdown(null);
                               openMoveModal(doc.id);
                             }}
-                            className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-3"
+                            className="w-full px-4 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3"
                           >
                             <FolderOutput className="w-4 h-4"/> Move
                           </button>
-                          <div className="h-px bg-zinc-800/80 my-1.5 mx-2" />
+                          <div className="h-px bg-zinc-200/80 dark:bg-zinc-800/80 my-1.5 mx-2" />
                           <button 
                             onClick={(e) => { 
                               e.stopPropagation(); 
                               setDeleteConfirm({ isOpen: true, type: 'single', id: doc.id, isFolder: false }); 
                               setActiveDropdown(null); 
                             }} 
-                            className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 flex items-center gap-3"
+                            className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center gap-3"
                           >
                             <Trash2 className="w-4 h-4"/> Delete
                           </button></>)}
@@ -1283,13 +1283,13 @@ export default function LibraryPage() {
                       )}
                     </div>
                     
-                    <div className="h-28 w-full bg-zinc-800/30 hover:bg-zinc-800/50 transition-colors rounded-lg flex items-center justify-center mb-3 cursor-pointer" onClick={(e) => { e.stopPropagation(); handleView(doc.id, doc.fileName, doc.fileType); }}>
+                    <div className="h-28 w-full bg-zinc-200/30 dark:bg-zinc-800/30 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 transition-colors rounded-lg flex items-center justify-center mb-3 cursor-pointer" onClick={(e) => { e.stopPropagation(); handleView(doc.id, doc.fileName, doc.fileType); }}>
                       <div className="w-12 h-12 rounded-xl bg-blue-900/20 border border-blue-800/40 flex items-center justify-center text-blue-500 shadow-inner group-hover:scale-105 transition-transform">
                         {doc.fileType.includes('image') ? <ImageIcon className="w-6 h-6" /> : <FileText className="w-6 h-6" />}
                       </div>
                     </div>
                     <h3 
-                      className="font-medium text-sm truncate text-zinc-200 mb-1 px-1 cursor-pointer hover:text-blue-400 transition-colors"
+                      className="font-medium text-sm truncate text-zinc-800 dark:text-zinc-200 mb-1 px-1 cursor-pointer hover:text-blue-400 transition-colors"
                       onClick={(e) => { e.stopPropagation(); handleView(doc.id, doc.fileName, doc.fileType); }}
                     >
                       {doc.fileName}
@@ -1309,13 +1309,13 @@ export default function LibraryPage() {
       {/* Delete Confirmation Modal */}
       {deleteConfirm.isOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6">
               <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
                 <AlertCircle className="w-6 h-6 text-red-500" />
               </div>
-              <h3 className="text-xl font-medium text-white mb-2">Confirm Deletion</h3>
-              <p className="text-zinc-400 text-sm mb-6">
+              <h3 className="text-xl font-medium text-zinc-900 dark:text-white mb-2">Confirm Deletion</h3>
+              <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-6">
                 {deleteConfirm.type === 'bulk' 
                   ? `Are you sure you want to delete ${selectedDocs.size} document(s)? This action cannot be undone.`
                   : `Are you sure you want to delete this ${deleteConfirm.isFolder ? 'folder' : 'document'}? This action cannot be undone.`
@@ -1325,7 +1325,7 @@ export default function LibraryPage() {
               <div className="flex items-center justify-end gap-3">
                 <button 
                   onClick={() => setDeleteConfirm({ isOpen: false, type: 'single' })}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
                 >
                   Cancel
                 </button>
@@ -1344,38 +1344,38 @@ export default function LibraryPage() {
       {/* Document Preview Modal */}
       {previewDocument && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] flex flex-col p-4 md:p-8 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-t-xl p-4 shadow-xl">
+          <div className="flex items-center justify-between bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-xl p-4 shadow-xl">
             <div className="flex items-center gap-3 max-w-[70%]">
               <div className="w-8 h-8 rounded-lg bg-blue-900/20 border border-blue-800/40 flex items-center justify-center text-blue-500 shrink-0">
                 {previewDocument.fileType.includes('image') ? <ImageIcon className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
               </div>
-              <h3 className="text-lg font-medium text-white truncate">{previewDocument.fileName}</h3>
+              <h3 className="text-lg font-medium text-zinc-900 dark:text-white truncate">{previewDocument.fileName}</h3>
             </div>
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => handleDownload(previewDocument.id, previewDocument.fileName)}
-                className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors flex items-center gap-2"
+                className="p-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors flex items-center gap-2"
                 title="Download"
               >
                 <Download className="w-5 h-5" />
                 <span className="hidden sm:inline text-sm font-medium">Download</span>
               </button>
-              <div className="w-px h-6 bg-zinc-800 mx-1" />
+              <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800 mx-1" />
               <button 
                 onClick={() => {
                   URL.revokeObjectURL(previewDocument.url);
                   setPreviewDocument(null);
                 }}
-                className="p-2 text-zinc-400 hover:text-white hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors"
+                className="p-2 text-zinc-600 dark:text-zinc-400 hover:text-white hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors"
                 title="Close"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
           </div>
-          <div className="flex-1 border-x border-b border-zinc-800 rounded-b-xl overflow-hidden relative flex flex-col md:flex-row bg-zinc-950">
+          <div className="flex-1 border-x border-b border-zinc-200 dark:border-zinc-800 rounded-b-xl overflow-hidden relative flex flex-col md:flex-row bg-zinc-50 dark:bg-zinc-950">
             {/* File Viewer */}
-            <div className="flex-1 relative flex items-center justify-center bg-zinc-950/50">
+            <div className="flex-1 relative flex items-center justify-center bg-zinc-50/50 dark:bg-zinc-950/50">
               {previewDocument.fileType.includes('image') ? (
                 <>
                   {/* Blob URL of the viewer's own download; next/image can't optimise blob: URLs. */}
@@ -1383,24 +1383,24 @@ export default function LibraryPage() {
                   <img src={previewDocument.url} alt={previewDocument.fileName} className="max-w-full max-h-full object-contain p-4" />
                 </>
               ) : previewDocument.fileType === 'pdf' ? (
-                <iframe src={`${previewDocument.url}#toolbar=0`} className="w-full h-full border-none bg-zinc-900 rounded-bl-xl" />
+                <iframe src={`${previewDocument.url}#toolbar=0`} className="w-full h-full border-none bg-zinc-100 dark:bg-zinc-900 rounded-bl-xl" />
               ) : (
                 <iframe sandbox="" src={previewDocument.url} className="w-full h-full border-none bg-white rounded-bl-xl" />
               )}
             </div>
             
             {/* Notes Sidebar */}
-            <div className="w-full md:w-80 border-t md:border-t-0 md:border-l border-zinc-800 bg-zinc-900/50 flex flex-col rounded-br-xl shrink-0">
-              <div className="p-4 border-b border-zinc-800 flex items-center gap-2 shrink-0">
-                <FileText className="w-4 h-4 text-zinc-400" />
-                <h4 className="font-medium text-sm text-zinc-200">Document Notes</h4>
+            <div className="w-full md:w-80 border-t md:border-t-0 md:border-l border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/50 flex flex-col rounded-br-xl shrink-0">
+              <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2 shrink-0">
+                <FileText className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+                <h4 className="font-medium text-sm text-zinc-800 dark:text-zinc-200">Document Notes</h4>
               </div>
               <div className="flex-1 p-4 flex flex-col gap-3 min-h-[250px]">
                 <textarea 
                   value={previewDocument.notes || ''}
                   onChange={(e) => setPreviewDocument(prev => prev ? {...prev, notes: e.target.value} : prev)}
                   placeholder="Add your notes about this document here..."
-                  className="flex-1 w-full bg-zinc-950/80 border border-zinc-800/80 rounded-xl p-3 text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all resize-none"
+                  className="flex-1 w-full bg-zinc-50/80 dark:bg-zinc-950/80 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-3 text-sm text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-300 dark:focus:border-zinc-700 focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-700 transition-all resize-none"
                 />
                 <button 
                   onClick={async () => {
@@ -1441,14 +1441,14 @@ export default function LibraryPage() {
       {/* Toast Notification */}
       {notification && (
         <div className="fixed bottom-6 right-6 z-[150] animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <div className="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-xl px-4 py-3 flex items-center gap-3 max-w-sm">
+          <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 shadow-2xl rounded-xl px-4 py-3 flex items-center gap-3 max-w-sm">
             {notification.type === 'error' ? (
               <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
             ) : (
               <Check className="w-5 h-5 text-green-500 shrink-0" />
             )}
-            <span className="text-sm font-medium text-zinc-200">{notification.message}</span>
-            <button onClick={() => setNotification(null)} className="text-zinc-500 hover:text-zinc-300 transition-colors ml-2 shrink-0">
+            <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{notification.message}</span>
+            <button onClick={() => setNotification(null)} className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors ml-2 shrink-0">
               <X className="w-4 h-4" />
             </button>
           </div>

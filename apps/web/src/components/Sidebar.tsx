@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { Plus, User, Trash2, Library } from 'lucide-react'
+import { Plus, Trash2, Library } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useEffect, useState } from 'react'
 import { getAccessToken } from '@/lib/auth-client'
 import { usePathname } from 'next/navigation'
 import { LibrarySwitcher } from '@/components/LibrarySwitcher'
+import { ProfileMenu } from '@/components/ProfileMenu'
 import { hardNavigate } from '@/lib/active-library'
 
 interface Conversation {
@@ -56,14 +57,14 @@ export function Sidebar({ logoutAction }: { logoutAction: () => void }) {
   }, [pathname]) // Refetch when pathname changes (e.g. after creating new chat)
 
   return (
-    <aside className="w-[260px] h-full bg-zinc-950 border-r border-zinc-800 flex flex-col shrink-0">
+    <aside className="w-[260px] h-full bg-zinc-50 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 flex flex-col shrink-0">
       <div className="pt-4">
         <LibrarySwitcher />
       </div>
 
       <div className="px-4 pb-4">
         <Link href="/dashboard/chat">
-          <Button variant="outline" className="w-full justify-start text-sm h-10 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-100 border-zinc-800 shadow-sm transition-all rounded-full">
+          <Button variant="outline" className="w-full justify-start text-sm h-10 bg-zinc-100/50 dark:bg-zinc-900/50 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-800 shadow-sm transition-all rounded-full">
             <Plus className="w-4 h-4 mr-2" />
             New Chat
           </Button>
@@ -73,9 +74,9 @@ export function Sidebar({ logoutAction }: { logoutAction: () => void }) {
       <div className="px-3 mb-4">
         <Link 
           href="/dashboard/library" 
-          className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${pathname === '/dashboard/library' ? 'bg-zinc-800 text-zinc-100 font-medium' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'}`}
+          className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${pathname === '/dashboard/library' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
         >
-          <Library className={`w-4 h-4 ${pathname === '/dashboard/library' ? 'text-zinc-100' : 'text-zinc-400 group-hover:text-zinc-200'}`} />
+          <Library className={`w-4 h-4 ${pathname === '/dashboard/library' ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-800 dark:group-hover:text-zinc-200'}`} />
           <span className="text-sm">Knowledge Library</span>
         </Link>
       </div>
@@ -87,8 +88,8 @@ export function Sidebar({ logoutAction }: { logoutAction: () => void }) {
           <div className="space-y-1 mt-1">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg">
-                <div className="w-4 h-4 rounded bg-zinc-800/50 animate-pulse shrink-0" />
-                <div className="h-4 bg-zinc-800/50 rounded animate-pulse w-3/4" />
+                <div className="w-4 h-4 rounded bg-zinc-200/50 dark:bg-zinc-800/50 animate-pulse shrink-0" />
+                <div className="h-4 bg-zinc-200/50 dark:bg-zinc-800/50 rounded animate-pulse w-3/4" />
               </div>
             ))}
           </div>
@@ -127,14 +128,14 @@ export function Sidebar({ logoutAction }: { logoutAction: () => void }) {
                 <Link 
                   key={conv.id} 
                   href={`/dashboard/chat/${conv.id}`} 
-                  className={`group flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'}`}
+                  className={`group flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
                 >
                   <div className="flex items-center gap-3 overflow-hidden">
                     <span className="text-sm truncate">{conv.title || 'New Conversation'}</span>
                   </div>
                   <button 
                     onClick={handleDelete}
-                    className={`shrink-0 p-1.5 rounded-md hover:bg-zinc-700 hover:text-zinc-100 transition-colors ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                    className={`shrink-0 p-1.5 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                     title="Delete chat"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -146,13 +147,8 @@ export function Sidebar({ logoutAction }: { logoutAction: () => void }) {
         )}
       </div>
 
-      <div className="p-4 border-t border-zinc-800/50">
-        <form action={logoutAction}>
-          <Button type="submit" variant="ghost" className="w-full justify-start text-sm h-10 hover:bg-zinc-800 text-zinc-400 rounded-lg">
-            <User className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
-        </form>
+      <div className="p-4 border-t border-zinc-200/50 dark:border-zinc-800/50">
+        <ProfileMenu logoutAction={logoutAction} />
       </div>
     </aside>
   )

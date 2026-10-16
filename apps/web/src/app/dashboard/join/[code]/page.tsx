@@ -33,17 +33,17 @@ export default function JoinLibraryPage({ params }: { params: Promise<{ code: st
 
   return (
     <div className="flex-1 flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-xl p-6 text-center space-y-4">
+      <div className="w-full max-w-md bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 text-center space-y-4">
         {!preview && !error && <Loader2 className="w-6 h-6 animate-spin text-zinc-500 mx-auto" />}
         {error && <p className="text-sm text-red-400">{error}</p>}
         {preview && (
           <>
             <Users className="w-8 h-8 text-blue-400 mx-auto" />
             <div>
-              <h1 className="text-xl font-semibold text-zinc-100">{preview.name}</h1>
+              <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{preview.name}</h1>
               {preview.description && <p className="text-sm text-zinc-500 mt-1">{preview.description}</p>}
             </div>
-            <p className="text-sm text-zinc-400">You&apos;ve been invited as <span className="text-zinc-200 font-medium">{preview.role}</span>.</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">You&apos;ve been invited as <span className="text-zinc-800 dark:text-zinc-200 font-medium">{preview.role}</span>.</p>
             {preview.usable ? (
               <Button onClick={join} disabled={joining} className="w-full">{joining ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Join library'}</Button>
             ) : (

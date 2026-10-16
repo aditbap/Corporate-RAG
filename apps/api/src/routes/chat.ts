@@ -6,6 +6,7 @@ import type { ScoredChunk } from '@rag/core';
 import crypto from 'crypto';
 import { redisConnection } from '../queue.js';
 import { consumeRateLimit } from '../lib/rate-limit.js';
+import { sseCorsHeaders } from '../lib/sse.js';
 import { ragPipelineDuration, ragCacheHits } from '../plugins/metrics.js';
 
 const chunkRepo = new ChunkRepository();
@@ -76,15 +77,6 @@ function reciprocalRankFusion(
 /** Minimum reranker relevance for a chunk to be used as context. */
 const RERANK_MIN_SCORE = parseFloat(process.env.RERANK_MIN_SCORE || '0.1');
 const CHAT_RATE_LIMIT_PER_MINUTE = parseInt(process.env.RATE_LIMIT_CHAT_PER_MINUTE || '20', 10);
-
-/** CORS headers for hijacked SSE responses (Fastify's cors plugin doesn't run after hijack). */
-function sseCorsHeaders(origin: string | undefined): Record<string, string> {
-  const allowed = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim());
-  if (!allowed) return { 'Access-Control-Allow-Origin': '*' };
-  return origin && allowed.includes(origin)
-    ? { 'Access-Control-Allow-Origin': origin, 'Vary': 'Origin' }
-    : {};
-}
 
 export const chatRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/completions', {

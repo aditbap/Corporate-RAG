@@ -6,6 +6,7 @@ import { db, sql } from '@rag/database';
 import { MinioStorageProvider } from '@rag/providers';
 import { documentRoutes } from './routes/documents.js';
 import { chatRoutes } from './routes/chat.js';
+import { guestChatRoutes } from './routes/guest-chat.js';
 import { conversationsRoutes } from './routes/conversations.js';
 import folderRoutes from './routes/folders.js';
 import { libraryRoutes } from './routes/libraries.js';
@@ -85,6 +86,10 @@ export function buildServer(): FastifyInstance {
   });
 
   registerMetrics(server);
+
+  // Public routes (no login): guests may chat without documents. Registered outside the
+  // authenticated scope below — keep everything that touches a library out of here.
+  server.register(guestChatRoutes, { prefix: '/api/v1/guest/chat' });
 
   // API Routes (v1)
   server.register(async (api) => {

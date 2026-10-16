@@ -10,7 +10,8 @@
 #   infra/keycloak/setup-realm.sh --dev-user   # also create dev user admin / admin123 (LOCAL ONLY)
 #
 # Overridable env: KEYCLOAK_CONTAINER, KEYCLOAK_REALM, AUTH_KEYCLOAK_ID, WEB_URL,
-#   KEYCLOAK_PUBLIC_URL, KEYCLOAK_ADMIN_USER, KEYCLOAK_ADMIN_PASSWORD, ENV_FILE
+#   KEYCLOAK_PUBLIC_URL, KEYCLOAK_ADMIN_USER, KEYCLOAK_ADMIN_PASSWORD, ENV_FILE,
+#   KEYCLOAK_ALLOW_REGISTRATION (default true: visitors can self-register)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -50,9 +51,16 @@ done
 if kc get "realms/$REALM" >/dev/null 2>&1; then
   echo "Realm '$REALM' exists"
 else
-  kc create realms -s "realm=$REALM" -s enabled=true -s registrationAllowed=false >/dev/null
+  kc create realms -s "realm=$REALM" -s enabled=true -s registrationAllowed=true >/dev/null
   echo "Created realm '$REALM'"
 fi
+
+# Custom login theme (infra/keycloak/themes/rag). Harmless if the image lacks it: Keycloak falls back to its default.
+kc update "realms/$REALM" -s loginTheme=rag >/dev/null && echo "Login theme set to 'rag'" || echo "Could not set login theme (skipped)"
+
+# Self-service sign-up: visitors can create their own account (no email verification: no SMTP is configured).
+# Set KEYCLOAK_ALLOW_REGISTRATION=false to turn it off.
+kc update "realms/$REALM" -s "registrationAllowed=${KEYCLOAK_ALLOW_REGISTRATION:-true}" >/dev/null && echo "Self-registration: ${KEYCLOAK_ALLOW_REGISTRATION:-true}"
 
 SECRET="$(get_env AUTH_KEYCLOAK_SECRET)"
 [[ -z "$SECRET" ]] && SECRET="$(openssl rand -hex 24)"

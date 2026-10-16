@@ -19,12 +19,11 @@ export function DashboardLayoutClient({
   const closeSidebar = () => setIsSidebarOpen(false)
 
   return (
-    <div className="flex h-screen bg-zinc-900 text-zinc-100 overflow-hidden font-sans relative">
+    <div className="flex h-screen bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 overflow-hidden font-sans relative">
       
       {/* Mobile Header */}
-      <div className="md:hidden absolute top-0 left-0 right-0 h-14 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800 z-40 flex items-center px-4 justify-between">
-        <div className="font-semibold text-zinc-100">Corporate RAG</div>
-        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="text-zinc-400 hover:text-zinc-100">
+      <div className="md:hidden absolute top-0 left-0 right-0 h-14 bg-zinc-100 dark:bg-zinc-900 z-40 flex items-center px-4 justify-end">
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100">
           <Menu className="w-5 h-5" />
         </Button>
       </div>
@@ -63,14 +62,14 @@ export function DashboardLayoutClient({
           variant="ghost" 
           size="icon" 
           onClick={closeSidebar} 
-          className="absolute top-2 right-2 md:hidden text-zinc-400 hover:text-zinc-100 bg-zinc-950/50 rounded-full"
+          className="absolute top-2 right-2 md:hidden text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-full"
         >
           <X className="w-5 h-5" />
         </Button>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen relative bg-zinc-900 pt-14 md:pt-0 overflow-hidden">
+      <main className="flex-1 flex flex-col h-screen relative bg-zinc-100 dark:bg-zinc-900 pt-14 md:pt-0 overflow-hidden">
         {children}
       </main>
     </div>

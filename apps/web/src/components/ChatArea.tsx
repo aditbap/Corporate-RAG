@@ -423,7 +423,7 @@ export function ChatArea({
                       </div>
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col gap-2">
-                      <div className="text-[15px] leading-[1.65] prose prose-invert prose-zinc max-w-none break-words">
+                      <div className="text-[15px] leading-[1.65] prose dark:prose-invert prose-zinc max-w-none break-words">
                         {m.content ? (
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {m.content}
@@ -479,7 +479,7 @@ export function ChatArea({
         <div className={`w-full max-w-3xl ${messages.length > 0 ? 'pointer-events-auto' : ''}`}>
           {messages.length === 0 && (
             <div className="text-center mb-8 pointer-events-none">
-              <h2 className="text-[22px] font-normal text-zinc-100">Let&apos;s Chat with RAG Assistant</h2>
+              <h2 className="text-[22px] font-normal text-zinc-900 dark:text-zinc-100">Let&apos;s Chat with RAG Assistant</h2>
             </div>
           )}
           {uploadStatus && (
@@ -512,7 +512,7 @@ export function ChatArea({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/50 transition-colors disabled:opacity-50 mb-[1px]"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/50 transition-colors disabled:opacity-50 mb-[1px]"
                 >
                   <Plus className="size-6" />
                 </button>}
@@ -522,7 +522,7 @@ export function ChatArea({
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask anything"
-                  className="w-full resize-none bg-transparent px-2 py-[8px] text-[15px] leading-relaxed placeholder:text-zinc-400 focus:outline-none max-h-[200px] overflow-y-auto no-scrollbar"
+                  className="w-full resize-none bg-transparent px-2 py-[8px] text-[15px] leading-relaxed placeholder:text-zinc-600 dark:placeholder:text-zinc-400 focus:outline-none max-h-[200px] overflow-y-auto no-scrollbar"
                   maxRows={8}
                   disabled={isLoading}
                 />
@@ -536,7 +536,7 @@ export function ChatArea({
                       aria-pressed={isListening}
                       className={cn(
                         'flex size-9 items-center justify-center rounded-full transition-colors',
-                        isListening ? 'bg-red-500/20 text-red-400 animate-pulse' : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/50',
+                        isListening ? 'bg-red-500/20 text-red-400 animate-pulse' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/50',
                       )}
                     >
                       <Mic className="size-5" />
@@ -546,7 +546,7 @@ export function ChatArea({
                   <button
                     onClick={(e) => handleSend(e as unknown as React.FormEvent)}
                     disabled={!input.trim() || isLoading}
-                    className="flex size-9 items-center justify-center rounded-full bg-zinc-700 text-zinc-200 transition-transform hover:bg-zinc-600 hover:text-white active:scale-95 disabled:bg-muted disabled:text-muted-foreground/30 disabled:cursor-not-allowed"
+                    className="flex size-9 items-center justify-center rounded-full bg-zinc-300 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 transition-transform hover:bg-zinc-400 dark:hover:bg-zinc-600 hover:text-zinc-900 dark:hover:text-white active:scale-95 disabled:bg-muted disabled:text-muted-foreground/30 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
                       <div className="size-2 rounded-sm bg-current animate-pulse" />
@@ -570,36 +570,36 @@ export function ChatArea({
       {/* Document Preview Modal */}
       {previewDocument && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] flex flex-col p-4 md:p-8 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-t-xl p-4 shadow-xl">
+          <div className="flex items-center justify-between bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-xl p-4 shadow-xl">
             <div className="flex items-center gap-3 max-w-[70%]">
               <div className="w-8 h-8 rounded-lg bg-blue-900/20 border border-blue-800/40 flex items-center justify-center text-blue-500 shrink-0">
                 {previewDocument.fileType.includes('image') ? <ImageIcon className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
               </div>
-              <h3 className="text-lg font-medium text-white truncate">{previewDocument.fileName}</h3>
+              <h3 className="text-lg font-medium text-zinc-900 dark:text-white truncate">{previewDocument.fileName}</h3>
             </div>
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => handleDownload(previewDocument.id, previewDocument.fileName)}
-                className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors flex items-center gap-2"
+                className="p-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors flex items-center gap-2"
                 title="Download"
               >
                 <Download className="w-5 h-5" />
                 <span className="hidden sm:inline text-sm font-medium">Download</span>
               </button>
-              <div className="w-px h-6 bg-zinc-800 mx-1" />
+              <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800 mx-1" />
               <button 
                 onClick={() => {
                   URL.revokeObjectURL(previewDocument.url);
                   setPreviewDocument(null);
                 }}
-                className="p-2 text-zinc-400 hover:text-white hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors"
+                className="p-2 text-zinc-600 dark:text-zinc-400 hover:text-white hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors"
                 title="Close"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
           </div>
-          <div className="flex-1 bg-zinc-950/50 border-x border-b border-zinc-800 rounded-b-xl overflow-hidden relative flex items-center justify-center">
+          <div className="flex-1 bg-zinc-50/50 dark:bg-zinc-950/50 border-x border-b border-zinc-200 dark:border-zinc-800 rounded-b-xl overflow-hidden relative flex items-center justify-center">
             {previewDocument.fileType.includes('image') ? (
               <>
                 {/* Blob URL of the viewer's own download; next/image can't optimise blob: URLs. */}
@@ -607,7 +607,7 @@ export function ChatArea({
                 <img src={previewDocument.url} alt={previewDocument.fileName} className="max-w-full max-h-full object-contain p-4" />
               </>
             ) : previewDocument.fileType === 'pdf' ? (
-              <iframe src={`${previewDocument.url}#toolbar=0`} className="w-full h-full border-none bg-zinc-900 rounded-b-xl" />
+              <iframe src={`${previewDocument.url}#toolbar=0`} className="w-full h-full border-none bg-zinc-100 dark:bg-zinc-900 rounded-b-xl" />
             ) : (
               <iframe sandbox="" src={previewDocument.url} className="w-full h-full border-none bg-white rounded-b-xl" />
             )}
@@ -618,14 +618,14 @@ export function ChatArea({
       {/* Toast Notification */}
       {notification && (
         <div className="fixed bottom-6 right-6 z-[150] animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <div className="bg-zinc-900 border border-zinc-700 shadow-2xl rounded-xl px-4 py-3 flex items-center gap-3 max-w-sm">
+          <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 shadow-2xl rounded-xl px-4 py-3 flex items-center gap-3 max-w-sm">
             {notification.type === 'error' ? (
               <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
             ) : (
               <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
             )}
-            <span className="text-sm font-medium text-zinc-200">{notification.message}</span>
-            <button onClick={() => setNotification(null)} className="text-zinc-500 hover:text-zinc-300 transition-colors ml-2 shrink-0">
+            <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{notification.message}</span>
+            <button onClick={() => setNotification(null)} className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors ml-2 shrink-0">
               <X className="w-4 h-4" />
             </button>
           </div>

@@ -22,3 +22,10 @@ Do not use `--dev-user` or the default `admin/admin` bootstrap credentials outsi
 
 `pnpm --filter @rag/api test:integration` creates throw-away Keycloak users/client through the admin
 API and removes them (and their DB rows) afterwards. It refuses to run against a non-local Keycloak/API.
+
+## Login theme
+
+`themes/rag` restyles the Keycloak login page to match the web app (neutral palette, Inter, card layout). It extends the
+stock `keycloak.v2` theme with one CSS file, so there are no template overrides to maintain. The Keycloak image is built
+from `infra/keycloak/Dockerfile` (stock image + the theme). `setup-realm.sh` selects it (`loginTheme=rag`); for an existing
+realm you can also set it in the admin console: Realm settings -> Themes -> Login theme = `rag`.

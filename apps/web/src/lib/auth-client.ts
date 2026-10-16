@@ -13,8 +13,8 @@ export async function getAccessToken(): Promise<string | null> {
   // `session` callback) — this cast just tells TS about it at this call site.
   const current = session as { accessToken?: string; error?: string } | null
   if (current?.error === 'RefreshAccessTokenError') {
-    // The Keycloak session is gone (idle timeout, logout elsewhere): start over at the login page.
-    void signOut({ callbackUrl: '/login' })
+    // The Keycloak session is gone (idle timeout, logout elsewhere): clear it and fall back to the guest chat.
+    void signOut({ callbackUrl: '/' })
     return null
   }
   return current?.accessToken ?? null

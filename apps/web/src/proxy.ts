@@ -3,7 +3,19 @@ import { auth } from '@/auth'
 
 export default auth((request) => {
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login')
-  const isLoggedIn = !!request.auth
+  // A session whose refresh token is dead (`error` set) is no better than no session: treating it as
+  // signed-in would send the visitor to the dashboard, where the client signs them out to /login.
+  const isLoggedIn = !!request.auth && !request.auth.error
+
+  // Visitors who are not signed in land on the guest chat. Signing in is optional and only needed
+  // for what is tied to an account (uploads, libraries, saved conversations).
+  const path = request.nextUrl.pathname.replace(/\/+$/, '')
+  if (!isLoggedIn && (path === '/dashboard' || path === '/dashboard/chat' || path === '/dashboard/chat/new')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/'
+    url.search = ''
+    return NextResponse.redirect(url)
+  }
 
   if (!isLoggedIn && !isAuthRoute && request.nextUrl.pathname.startsWith('/dashboard')) {
     const url = request.nextUrl.clone()

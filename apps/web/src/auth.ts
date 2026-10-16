@@ -46,6 +46,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientSecret: process.env.AUTH_KEYCLOAK_SECRET,
       issuer: process.env.AUTH_KEYCLOAK_ISSUER,
     }),
+    // Same client and realm, but the browser lands on Keycloak's registration form instead of the
+    // login form ("Create account"). Keycloak 26.0 has no `prompt=create`, so it is a separate
+    // provider whose authorization URL is the realm's /registrations endpoint. Going through
+    // Auth.js keeps its state/PKCE checks intact (a hand-built link would fail the callback).
+    {
+      ...Keycloak({
+        clientId: process.env.AUTH_KEYCLOAK_ID,
+        clientSecret: process.env.AUTH_KEYCLOAK_SECRET,
+        issuer: process.env.AUTH_KEYCLOAK_ISSUER,
+        authorization: { url: `${process.env.AUTH_KEYCLOAK_ISSUER}/protocol/openid-connect/registrations`, params: { scope: 'openid email profile' } },
+      }),
+      // The factory fixes `id` to "keycloak"; it must be overridden on the returned object.
+      id: 'keycloak-register',
+      name: 'Keycloak (register)',
+    },
   ],
   session: { strategy: 'jwt' },
   callbacks: {
