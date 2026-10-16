@@ -89,6 +89,9 @@ const ALLOWED_MIME_TYPES = [
   'image/webp'
 ];
 
+/** Same limit server.ts hands to @fastify/multipart. */
+const MAX_FILE_SIZE_MB = parseInt(process.env.MAX_FILE_SIZE_MB || '100', 10);
+
 /** Maps an uploaded MIME type to the short file type the ingestion worker dispatches on. */
 function fileTypeFromMime(mimetype: string): string {
   return mimetype.includes('pdf') ? 'pdf' :
@@ -173,6 +176,13 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (err) {
       request.log.error(err, 'Failed to upload file to storage');
       return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Failed to process file' } });
+    }
+
+    // @fastify/multipart cuts the stream at the size limit and only flags it; without this check a
+    // file over the limit would be stored truncated and ingested as if it were complete.
+    if (data.file.truncated) {
+      await storage.delete(objectKey).catch(() => undefined);
+      return reply.status(413).send({ error: { code: 'FILE_TOO_LARGE', message: `File exceeds the ${MAX_FILE_SIZE_MB} MB limit.`, requestId: request.id } });
     }
 
     const fileHash = hash.digest('hex');
@@ -306,6 +316,13 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (err) {
       request.log.error(err, 'Failed to upload file to storage');
       return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Failed to process file' } });
+    }
+
+    // @fastify/multipart cuts the stream at the size limit and only flags it; without this check a
+    // file over the limit would be stored truncated and ingested as if it were complete.
+    if (data.file.truncated) {
+      await storage.delete(objectKey).catch(() => undefined);
+      return reply.status(413).send({ error: { code: 'FILE_TOO_LARGE', message: `File exceeds the ${MAX_FILE_SIZE_MB} MB limit.`, requestId: request.id } });
     }
 
     const fileHash = hash.digest('hex');
