@@ -87,7 +87,10 @@ export class ChunkRepository extends BaseRepository {
    * MUST match that index's expression exactly or Postgres won't use it.
    */
   async searchFullText(orgId: string, query: string, limit: number = 15, documentIds?: string[]) {
-    const tsquery = sql`websearch_to_tsquery('english', ${query})`;
+    // plainto_tsquery sanitises the input and ANDs every term; swap the ANDs for ORs so a natural
+    // question ("berapa jumlah kapal?") still matches a chunk that lacks one of its filler words.
+    // ts_rank_cd then ranks chunks containing more of the terms higher, and the reranker decides.
+    const tsquery = sql`replace(plainto_tsquery('english', ${query})::text, ' & ', ' | ')::tsquery`;
     const tsvector = sql`to_tsvector('english', ${documentChunks.content})`;
     const rank = sql<number>`ts_rank_cd(${tsvector}, ${tsquery})`;
 

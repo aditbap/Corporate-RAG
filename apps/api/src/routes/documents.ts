@@ -89,6 +89,20 @@ const ALLOWED_MIME_TYPES = [
   'image/webp'
 ];
 
+/** Maps an uploaded MIME type to the short file type the ingestion worker dispatches on. */
+function fileTypeFromMime(mimetype: string): string {
+  return mimetype.includes('pdf') ? 'pdf' :
+         mimetype.includes('word') ? 'docx' :
+         mimetype.includes('html') ? 'html' :
+         mimetype.includes('markdown') ? 'md' :
+         mimetype.includes('jpeg') ? 'jpeg' :
+         mimetype.includes('png') ? 'png' :
+         mimetype.includes('webp') ? 'webp' : 'txt';
+}
+
+/** txt and md are both parsed as plain text, so they may replace one another. */
+const sameFileFamily = (a: string, b: string) => a === b || (['txt', 'md'].includes(a) && ['txt', 'md'].includes(b));
+
 /** 403 unless the caller may update/delete this document (admins: any; members: only their own uploads). */
 function denyIfNotAllowed(request: FastifyRequest, reply: FastifyReply, verb: 'update' | 'delete', uploadedBy: string | null | undefined) {
   if (canMutateDocument(request.userRole as Role, verb, uploadedBy, requireUser(request).id)) return false;
@@ -168,13 +182,7 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(403).send({ error: { code: 'QUOTA_EXCEEDED', message: 'This upload would exceed the library\'s storage limit.', requestId: request.id } });
     }
 
-    const fileType = data.mimetype.includes('pdf') ? 'pdf' :
-                     data.mimetype.includes('word') ? 'docx' :
-                     data.mimetype.includes('html') ? 'html' :
-                     data.mimetype.includes('markdown') ? 'md' :
-                     data.mimetype.includes('jpeg') ? 'jpeg' :
-                     data.mimetype.includes('png') ? 'png' :
-                     data.mimetype.includes('webp') ? 'webp' : 'txt';
+    const fileType = fileTypeFromMime(data.mimetype);
 
     const folderField = data.fields?.folderId;
     // The web client sends the string 'null' for "library root".
@@ -277,6 +285,13 @@ export const documentRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (!ALLOWED_MIME_TYPES.includes(data.mimetype)) {
       return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: `Unsupported file type: ${data.mimetype}` } });
+    }
+
+    // The worker parses by the document's stored type, so a replacement of a different type
+    // would be ingested with the wrong parser (or silently keep serving the old content).
+    const newType = fileTypeFromMime(data.mimetype);
+    if (!sameFileFamily(newType, existingDoc.fileType)) {
+      return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: `A new version must be the same file type as the document (${existingDoc.fileType}), got ${newType}` } });
     }
 
     const objectKey = `${orgId}/${crypto.randomUUID()}-${safeObjectName(data.filename)}`;

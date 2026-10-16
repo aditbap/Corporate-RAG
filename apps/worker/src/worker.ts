@@ -2,7 +2,7 @@ import { Worker, Job, UnrecoverableError } from 'bullmq';
 import { INGESTION_QUEUE_NAME, redisConnection } from './queue.js';
 import { JobRepository, ChunkRepository, DocumentRepository } from '@rag/database';
 import {
-  PdfParser, DocxParser, TxtParser, RecursiveChunker, NvidiaEmbeddingProvider, MinioStorageProvider,
+  PdfParser, DocxParser, TxtParser, HtmlParser, RecursiveChunker, NvidiaEmbeddingProvider, MinioStorageProvider,
   PaddleOcrProvider, needsOcr, scanBuffer,
 } from '@rag/providers';
 import type { ParsedDocument } from '@rag/core';
@@ -69,6 +69,7 @@ export const ingestionWorker = new Worker<IngestionJobData>(
         let parser;
         if (fileType === 'pdf') parser = new PdfParser();
         else if (fileType === 'docx') parser = new DocxParser();
+        else if (fileType === 'html') parser = new HtmlParser();
         else parser = new TxtParser();
 
         parsed = await parser.parse(buffer, fileType);

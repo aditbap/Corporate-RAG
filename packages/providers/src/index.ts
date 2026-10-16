@@ -6,6 +6,7 @@ export * from './interfaces/llm.js';
 export * from './parsers/pdf-parser.js';
 export * from './parsers/docx-parser.js';
 export * from './parsers/txt-parser.js';
+export * from './parsers/html-parser.js';
 export * from './chunkers/recursive.js';
 export * from './cohere/reranker.js';
 export * from './langfuse.js';
